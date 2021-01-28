@@ -74,14 +74,14 @@ def add_create_parser(subparsers, parent_parser):
     parser = subparsers.add_parser(
         'create',
         help='Creates a new job transaction',
-        description='Creates a new job transaction with <workerId> <publisherId>'
-        '<start_time> <end_time> <deadline> <base_rewards>.',
+        description='Creates a new job transaction with <receiverId> <publisherId>'
+        '<data_size> <start_time> <expire_time> <guaranteed_rt> <test_rt> <base_rewards> <is_integrity>.',
         parents=[parent_parser])
 
     parser.add_argument(
-        'workerId',
+        'receiverId',
         type=str,
-        help='unique identifier for the worker')
+        help='unique identifier for the receiver')
 
     parser.add_argument(
         'publisherId',
@@ -89,24 +89,39 @@ def add_create_parser(subparsers, parent_parser):
         help='unique identifier for the publisher')
 
     parser.add_argument(
+        'data_size',
+        type=str,
+        help='unique identifier for the data size')
+        
+    parser.add_argument(
         'start_time',
         type=float,
         help='job start time')
 
     parser.add_argument(
-        'end_time',
+        'expire_time',
         type=float,
-        help='job finish time')
+        help='job expire time')
     
     parser.add_argument(
-        'deadline',
+        'guaranteed_rt',
         type=float,
-        help='expected job finish time')
+        help='expected job guaranteed response time')
+
+    parser.add_argument(
+        'test_rt',
+        type=float,
+        help='expected job test response time')
 
     parser.add_argument(
         'base_rewards',
         type=float,
         help='given base rewards')
+
+    parser.add_argument(
+        'is_integrity',
+        type=float,
+        help='given is integrity')
 
     parser.add_argument(
         '--url',
