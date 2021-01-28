@@ -48,13 +48,16 @@ class JobTransactionHandler(TransactionHandler):
         if job_payload.action == 'create':
             print('+++++++++++++++++creating job +++++++++++++++++++++++')
             job = Job(jobId=job_payload.jobId,
-                        workerId=job_payload.workerId,
+                        receiverId=job_payload.receiverId,
                         publisherId=job_payload.publisherId,
+                        data_size=job_payload.data_size,
                         start_time=job_payload.start_time,
-                        end_time=job_payload.end_time,
-                        deadline=job_payload.deadline,
+                        expire_time=job_payload.expire_time,
+                        guaranteed_rt=job_payload.guaranteed_rt,
+                        test_rt=job_payload.test_rt,
                         base_rewards=job_payload.base_rewards,
-                        extra_rewards=job_payload.extra_rewards)
+                        extra_rewards=job_payload.extra_rewards,
+                        is_integrity=job_payload.is_integrity)
             print('+++++++++++++++++hanlder: job +++++++++++++++++++')
             print('job id: ' + job_payload.jobId)
             job_state.set_job(job_payload.jobId, job)

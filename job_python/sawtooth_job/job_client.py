@@ -77,95 +77,85 @@ class JobClient:
             .new_signer(private_key)
 
     # propose a job record
-    def create(self, workerId, publisherId, start_time, end_time, deadline, base_rewards, wait=None):
+    def create(self, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, is_integrity, wait=None):
         jobId = str(uuid.uuid4())
-        if(end_time - start_time) < deadline:
-            extra_rewards = round((P*(deadline - (end_time - start_time)) / deadline)*base_rewards, 1)
+        if test_rt < guaranteed_rt:
+            extra_rewards = round((P*(guaranteed_rt - test_rt) / guaranteed_rt)*base_rewards, 1)
+        elif not is_integrity:
+            extra_rewards = 0
+            base_rewards = 0
         else:
             extra_rewards = 0
             base_rewards = 0.5*base_rewards
         return self._send_transaction(
             jobId,
-            workerId,
+            receiverId,
             publisherId,
+            data_size,
             str(start_time),
-            str(end_time),
-            str(deadline),
+            str(expire_time),
+            str(guaranteed_rt),
+            str(test_rt),
             str(base_rewards),
             str(extra_rewards),
+            is_integrity,
             "create",
             wait=wait,
             )
+    """
+    # get job response as input, choose a receiver
+    def chooseReceiver(self, receiver1, receiver2, receiver3, receiver4, receiver5, receiver6, receiver7):
+        # get receivers response, pick finish time as a param
+        receivers_id = []
+        # the time receivers finish the job
+        guaranteed_rts = {}
+        if receiver1 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver1.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
 
-    # get job response as input, choose a worker
-    def chooseWorker(self, worker1, worker2, worker3, worker4, worker5, worker6, worker7):
-        # get workers response, pick finish time as a param
-        workers_id = []
-        # the time workers finish the job
-        working_time = {}
-        if worker1 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker1.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
+        if receiver2 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver2.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
 
-        if worker2 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker2.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
+        if receiver3 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver3.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
 
-        if worker3 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker3.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
-
-        if worker4 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker4.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
+        if receiver4 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver4.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
         
-        if worker5 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker5.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
+        if receiver5 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver5.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
 
-        if worker6 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker6.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
+        if receiver6 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver6.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
 
-        if worker7 is not None:
-            workerId, publisherId, start_time, end_time, deadline = worker7.split(',')
-            workers_id.append(workerId)
-            working_time[workerId] = float(end_time) - float(start_time)
+        if receiver7 is not None:
+            receiverId, publisherId, start_time, guaranteed_rt = receiver7.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
 
-        # get reputation of workers
-        repus = self.computeReputation(workers_id)
+        # get reputation of receivers
+        repus = self.computeReputation(receivers_id)
         print('++++ reputation +++++')
         print(repus)
-        # emulate delay for workers, ms
-        delays = {
-            'server_a': 103,
-            'server_b': 136,
-            'server_c': 115,
-            'server_d': 124,
-            'server_e': 109,
-            'server_f': 136,
-            'server_g': 115,
-            'server_h': 129,
-        }
-        worker_delays = {}
-        for w in workers_id:
-            if w in delays:
-                worker_delays[w] = delays[w]
         
-        # print('++++ worker_delays +++++')
-        # print(worker_delays)
+        # print('++++ receiver_delays +++++')
+        # print(receiver_delays)
 
         # print('++++ working_time +++++')
         # print(working_time)
 
-        normalized_working_time = self.normalization(working_time)
-        normalized_delay = self.normalization(worker_delays)
+        normalized_guaranteed_rt = self.normalization(guaranteed_rts)
         normalized_repus = self.normalization(repus)
         # print('++++ normalized_working_time +++++')
         # print(normalized_working_time)
@@ -174,39 +164,57 @@ class JobClient:
         # print('++++ normalized_repus +++++')
         # print(normalized_repus)
 
-        # compute scores for workers, choose the best
+        # compute scores for receivers, choose the best
         # call create function with parms
-        return self.chooseOne(workers_id, normalized_working_time, normalized_delay, normalized_repus)
+        return self.chooseOne(receivers_id, normalized_guaranteed_rt, normalized_repus)
+    """
 
-    def chooseWorker2(self, data):
-        print('chooseWorker2: ')
-        print(data)
-        # get reputation of workers
-        repus = self.computeReputation(data)
+    # get job response as input, choose a receiver
+    # candidates format:
+    # [receiverId,publisherId,start_time,guaranteed_rt], an array
+    def chooseReceiver(self, candidates):
+        # get receivers response, pick finish time as a param
+        receivers_id = []
+        # the time receivers finish the job
+        guaranteed_rts = {}
+        
+        for candidate in candidates:
+            receiverId, publisherId, start_time, guaranteed_rt = candidate.split(',')
+            receivers_id.append(receiverId)
+            guaranteed_rts[receiverId] = float(guaranteed_rt)
+            
+        # get reputation of receivers
+        repus = self.computeReputation(receivers_id)
         print('++++ reputation +++++')
         print(repus)
+        
+        # print('++++ receiver_delays +++++')
+        # print(receiver_delays)
 
+        # print('++++ working_time +++++')
+        # print(working_time)
 
-        sorted_repu = sorted(repus.items(), key=lambda x: x[1],reverse = True)
-        print('++++ sorted_repu +++++')
-        print(sorted_repu[0])
-        return sorted_repu[0][0]
-        # normalized_working_time = self.normalization(working_time)
-        # normalized_delay = self.normalization(worker_delays)
-        # normalized_repus = self.normalization(repus)
-     
-        # return self.chooseOne(workers_id, normalized_delay, normalized_repus)
+        normalized_guaranteed_rt = self.normalization(guaranteed_rts)
+        normalized_repus = self.normalization(repus)
+        # print('++++ normalized_working_time +++++')
+        # print(normalized_working_time)
+        # print('++++ normalized_delay +++++')
+        # print(normalized_delay)
+        # print('++++ normalized_repus +++++')
+        # print(normalized_repus)
 
+        # compute scores for receivers, choose the best
+        # call create function with parms
+        return self.chooseOne(receivers_id, normalized_guaranteed_rt, normalized_repus)
 
-    def chooseOne(self, workers, delay, reputation, working_time):
-        delay_weight = 0.3
-        working_time_weight = 0.3
+    def chooseOne(self, receivers, reputation, guaranteed_rt):
+        guaranteed_rt_weight = 0.3
         reputation_weight = 0.7
 
         combine = {}
-        for workerId in workers:
-            combine[workerId] = reputation_weight*reputation[workerId] 
-            - delay_weight*delay[workerId] - working_time_weight*working_time[workerId]
+        for receiverId in receivers:
+            combine[receiverId] = reputation_weight*reputation[receiverId] 
+            + guaranteed_rt_weight*guaranteed_rt[receiverId]
         print('++++ choose one combine +++++')
         print(combine)
         s = sorted(combine.items(), key=lambda x: x[1],reverse = True)
@@ -226,11 +234,12 @@ class JobClient:
                 normalized[key] = (data[key] - min) / (max - min)
         return normalized
 
-    def computeReputation(self, workerIds):
+    def computeReputation(self, receiverIds):
         # current time in millisecond
         # current_time = time.time()
-        current_time = 1593871200000
+        # current_time = 1593871200000
 
+        # store each node's available rewards, used for validation phase
         print('++++++++create log file++++++++')
         logger = logging.getLogger()
         hdlr = logging.FileHandler('/home/ubuntu/reputation.log')
@@ -246,20 +255,19 @@ class JobClient:
 
         # construct job record for reputation computation
         # required: start_time 
-        #           end_time 
         #           extra_rewards 
         job_record = {}
         jobs = []
         if job_list is not None:
             for job_data in job_list:
-                jobId, workerId, publisherId, start_time, end_time, deadline, base_rewards, extra_rewards = job_data
-                job_record.setdefault(workerId, []).append({
+                jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job_data
+                # store jobs according to receiverId
+                job_record.setdefault(receiverId, []).append({
                     'start_time': start_time,
-                    'end_time': end_time,
                     'extra_rewards': extra_rewards
                 })
                 jobs.append({
-                    'workerId': workerId,
+                    'receiverId': receiverId,
                     'publisherId': publisherId,
                     'base_rewards': float(base_rewards),
                     'extra_rewards': float(extra_rewards)
@@ -267,155 +275,82 @@ class JobClient:
         else:
             raise JobException("Could not retrieve game listing.")
 
-        # print('++++++++job record in chain++++++++')
-        # print(job_record)
+        print('++++++++job record in chain++++++++')
+        print(job_record)
         
-        # time factor based reputation calculation
-        # based on running history
-        score_running_based = self.computeBasedOnRunningTime(current_time, workerIds, job_record)
-        # print('++++++++ score_running_based n++++++++')
-        # print(score_running_based)
-
-        # rewards based reputation calculation
         # based on extra rewards, reflecting histroy performance
-        score_rewards_based = self.computeBasedOnRewards(current_time, workerIds, job_record)
-        # print('++++++++ score_rewards_based n++++++++')
-        # print(score_rewards_based)
-        reputation_workers = {}
+        # only compute for who has expressed interests
+        reputation_receivers = self.computeBasedOnRewards(receiverIds, job_record)
+        print('++++++++ reputation_receivers n++++++++')
+        print(reputation_receivers)
 
-        for workerId in workerIds:
-            if workerId in score_running_based and workerId in score_rewards_based:
-                reputation_workers[workerId] = (2*score_running_based[workerId]*score_rewards_based[workerId]) / (score_running_based[workerId]+score_rewards_based[workerId])
-        
         recvBaseRewards = {}
         recvExtraRewards = {}
         # initialize 
         for job in jobs:
-            recvBaseRewards[job['workerId']] = 0
-            recvExtraRewards[job['workerId']] = 0
+            recvBaseRewards[job['receiverId']] = 0
+            recvExtraRewards[job['receiverId']] = 0
 
         for job in jobs:
-            recvBaseRewards[job['workerId']] += job['base_rewards']
-            recvExtraRewards[job['workerId']] += job['extra_rewards']
+            recvBaseRewards[job['receiverId']] += job['base_rewards']
+            recvExtraRewards[job['receiverId']] += job['extra_rewards']
 
-        for workerId in workerIds:
-            info = workerId + ' - ' +str(recvBaseRewards[workerId]) + ' - ' + str(recvExtraRewards[workerId]) + ' - ' + str(round(reputation_workers[workerId], 3))
+        for receiverId in receiverIds:
+            info = receiverId + ' - ' +str(recvBaseRewards[receiverId]) + ' - ' + str(recvExtraRewards[receiverId]) + ' - ' + str(round(reputation_receivers[receiverId], 3))
             print('++++++++write log++++++++')
             print(info)
             logger.info(info)
 
-        return reputation_workers
+        return reputation_receivers
 
-    def computeBasedOnRunningTime(self, current_time, workerIds, job_record):
-        A = 0.6
-        # required:
-        # 1. the first job time for each worker
-        # 2. the number of jobs for all nodes within 10 days
-        # 3. the number of jobs for each worker within 10 days
-
-        # the number of jobs of all nodes within 10 days
-        job_num_all = 0
-        for records in job_record.values():
-            for record in records:
-                if float(record['end_time']) > current_time-PERIOD:
-                    job_num_all += 1
-        # print('++++ number of all jobs+++++')
-        # print(job_num_all)
-        # the number of jobs of each worker within 10 days
-        job_num_worker = {}
-        # the start time of the first job for each worker
-        worker_start = {}
-        for workerId, records in job_record.items():
-            if workerId in workerIds:
-                # store workers' job amount within 10 days
-                job_num_worker[workerId] = len(list(filter(lambda x: float(x['end_time']) > current_time-PERIOD, records)))
-                # workers' start time of the first job
-                worker_start[workerId] = float(sorted(records, key=lambda x: float(x['start_time']))[0]['start_time'])
-
-        # print('++++ worker start time +++++')
-        # print(worker_start)
-        # print('++++ worker number of jobs +++++')
-        # print(job_num_worker)
-        # compute score based on history jobs and running time
-        running_score = {}
-        averge_job = {}
-        running_time = {}
-
-        for workerId, v in worker_start.items():
-            running_time[workerId] = math.e**(-1/(current_time - v + 1))
-        for workerId, v in job_num_worker.items():
-            if job_num_all > 0:
-                averge_job[workerId] = v / (2 * (job_num_all/4))
-            else:
-                averge_job[workerId] = 0
-        # print('++++ running_time +++++')
-        # print(running_time)
-        # print('++++ averge_job +++++')
-        # print(averge_job)
-
-        for workerId, v in running_time.items():
-            if workerId in averge_job:
-                running_score[workerId] = A*v + (1-A)*averge_job[workerId]
-
-        # print('++++ running_score +++++')
-        # print(running_score)
-
-        return running_score
-
-    def computeBasedOnRewards(self, current_time, workerIds, job_record):
-        B = 0.7
+    def computeBasedOnRewards(self, receiverIds, job_record):
+        B = 0.2
         reward_score = {}
-        # required:
-        # extra rewards on each record of workers (within 10 days and execeed 10 days)
-        
-        # (within period) extra rewards have full wetight
-        rewards_within_period = {}
-        # (execeed period) extra rewards have exponential moving average
-        rewards_execeed_period = {}
-        for workerId, records in job_record.items():
-            if workerId in workerIds:
+        rewards = {}
+        RECENT_JOB_NUM = 20
+        print('+++++ unsorted print(job_record) ++++')
+        print(job_record)
+        # sort by start time
+        for receiverId, records in job_record.items():
+            job_record[receiverId] = sorted(records, key=lambda x: x['start_time'], reverse=True)
+        print('+++++ sorted print(job_record) ++++')
+        print(job_record)
+        # extra rewards on each record of receivers on recent X number of jobs
+        i = 0
+        for receiverId, records in job_record.items():
+            if receiverId in receiverIds:
                 for record in records:
-                    if float(record['end_time']) > current_time-PERIOD:
-                        rewards_within_period.setdefault(workerId, []).append({
-                            'end_time': float(record['end_time']),
+                    if i<RECENT_JOB_NUM:
+                        rewards.setdefault(receiverId, []).append({
+                            'start_time': float(record['start_time']),
                             'extra_rewards': float(record['extra_rewards'])
-                        }) 
-                    else:
-                        rewards_execeed_period.setdefault(workerId, []).append({
-                            'end_time': float(record['end_time']),
-                            'extra_rewards': (float(record['extra_rewards'])*math.e**-((current_time-float(record['end_time']))/PERIOD))
                         })
-        print('+++++ rewards_within_period ++++')
-        print(rewards_within_period)
-        print('+++++ rewards_execeed_period ++++')
-        print(rewards_execeed_period)
-
-        combined_rewards = rewards_within_period.copy()
-        for workerId, records in rewards_execeed_period.items():
-            for record in records:
-                if workerId in combined_rewards:
-                    combined_rewards[workerId].append(record)
-                else:
-                    combined_rewards.setdefault(workerId, []).append(record)
-
-        print('+++++ combined_rewards ++++')
-        print(combined_rewards)
+                    i = i+1
         
-        # sort by end time
-        for workerId, records in combined_rewards.items():
-            combined_rewards[workerId] = sorted(records, key=lambda x: x['end_time'], reverse=True)
-        print('+++++ sorted combined_rewards ++++')
-        print(combined_rewards)
+        print('+++++ sorted print(reward_score) ++++')
+        print(rewards)
         
-        previous = 0
-        for workerId, records in combined_rewards.items():
+        for receiverId, records in rewards.items():
             score = 0
             for record in records:
-                score = B*score + (1-B)*record['extra_rewards']
-            reward_score[workerId] = score
+                score = B*record['extra_rewards'] + (1-B)*score 
+            reward_score[receiverId] = score
 
         return reward_score
 
+    def getHihgestReceiver(self, receivers):
+        print('====receivers: ')
+        print(receivers)
+        # get reputation of workers
+        repus = self.computeReputation(receivers)
+        print('++++ reputation +++++')
+        print(repus)
+
+
+        sorted_repu = sorted(repus.items(), key=lambda x: x[1],reverse = True)
+        print('++++ sorted_repu +++++')
+        print(sorted_repu[0])
+        return sorted_repu[0]
 
     def getJob(self, jobId, space, wait=None):
         return self._send_transaction(
@@ -509,18 +444,21 @@ class JobClient:
 
     def _send_transaction(self,
                     jobId,
-                    workerId,
+                    receiverId,
                     publisherId,
+                    data_size,
                     start_time,
-                    end_time,
-                    deadline,
+                    expire_time,
+                    guaranteed_rt,
+                    test_rt,
                     base_rewards,
                     extra_rewards,
+                    is_integrity,
                     action,
                     wait=None):
         # Serialization is just a delimited utf-8 encoded string
-        payload = ",".join([jobId, workerId, publisherId, start_time, end_time,
-                            deadline, base_rewards, extra_rewards, action]).encode()
+        payload = ",".join([jobId, receiverId, publisherId, data_size, start_time, expire_time,
+                            guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity, action]).encode()
 
         print('client payload: ')
         print(payload)

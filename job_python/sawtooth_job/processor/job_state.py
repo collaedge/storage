@@ -25,15 +25,18 @@ def _make_job_address(jobId):
 
 
 class Job:
-    def __init__(self, jobId, workerId, publisherId, start_time, end_time, deadline, base_rewards, extra_rewards):
+    def __init__(self, jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity):
         self.jobId = jobId
-        self.workerId = workerId
+        self.receiverId = receiverId
         self.publisherId = publisherId
+        self.data_size = data_size
         self.start_time = start_time
-        self.end_time = end_time
-        self.deadline = deadline
+        self.expire_time = expire_time
+        self.guaranteed_rt = guaranteed_rt
+        self.test_rt = test_rt
         self.base_rewards = base_rewards
         self.extra_rewards = extra_rewards
+        self.is_integrity = is_integrity
 
 
 class JobState:
@@ -59,8 +62,8 @@ class JobState:
         """
         print('++++++++++++++set job++++++++++++++')
         jobs = self._load_jobs(jobId=jobId)
-        # print('+++++++++++++++++++++++++++jobs before set: ')
-        # print(jobs)
+        print('+++++++++++++++++++++++++++jobs before set: ')
+        print(jobs)
         jobs[jobId] = job
         print('+++++++++++++++++++++++++++jobs after set: ')
         print(jobs)
@@ -117,23 +120,23 @@ class JobState:
 
     def _deserialize(self, data):
         """Take bytes stored in state and deserialize them into Python
-        Game objects.
+        Job objects.
 
         Args:
             data (bytes): The UTF-8 encoded string stored in state.
 
         Returns:
-            (dict): game name (str) keys, Game values.
+            (dict): job id (str) keys, job values.
         """
 
         jobs = {}
         try:
             for job in data.decode().split("|"):
-                jobId, workerId, publisherId, start_time, end_time, deadline, base_rewards, extra_rewards = job.split(",")
-
-                jobs[jobId] = Job(jobId, workerId, start_time, end_time, deadline, base_rewards, extra_rewards)
+                jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job.split(",")
+                                
+                jobs[jobId] = Job(jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity)
         except ValueError:
-            raise InternalError("Failed to deserialize game data")
+            raise InternalError("Failed to deserialize job data")
 
         return jobs
 
@@ -150,7 +153,7 @@ class JobState:
         job_strs = []
         for jobId, job in jobs.items():
             job_str = ",".join(
-                [jobId, job.workerId, job.publisherId, job.start_time, job.end_time, job.deadline, job.base_rewards, job.extra_rewards])
+                [jobId, job.receiverId, job.publisherId, job.data_size, job.start_time, job.expire_time, job.guaranteed_rt, job.test_rt, job.base_rewards, job.extra_rewards, job.is_integrity])
             job_strs.append(job_str)
             print('++++++++++++job_strs: ')
             print(job_strs)

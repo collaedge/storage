@@ -319,14 +319,17 @@ def do_show(args):
     else:
         raise JobException("Job not found: {}".format(jobId))
 
-
+# input created job in console, to test weather a transaction can add to blockchain
 def do_create(args):
-    workerId = args.workerId
+    workerId = args.receiverId
     publisherId = args.publisherId
+    data_size = args.data_size
     start_time = args.start_time
-    end_time = args.end_time
-    deadline = args.deadline
+    expire_time = args.expire_time
+    guaranteed_rt = args.guaranteed_rt
+    test_rt = args.test_rt
     base_rewards = args.base_rewards
+    is_integrity = args.is_integrity
 
     url = _get_url(args)
     keyfile = _get_keyfile(args)
@@ -336,15 +339,15 @@ def do_create(args):
 
     if args.wait and args.wait > 0:
         response = client.create(
-            workerId, publisherId,
-            start_time, end_time, deadline,
-            base_rewards, wait=args.wait,
+            workerId, publisherId, data_size,
+            start_time, expire_time, guaranteed_rt, test_rt,
+            base_rewards, is_integrity, wait=args.wait,
             )
     else:
         response = client.create(
-            workerId, publisherId,
-            start_time, end_time, deadline,
-            base_rewards)
+            workerId, publisherId, data_size,
+            start_time, expire_time, guaranteed_rt, test_rt,
+            base_rewards, is_integrity)
 
     print("Response: {}".format(response))
 
@@ -354,6 +357,8 @@ def do_broadcast(args):
     tcp_client = TcpClient(args.publisher)
     tcp_client.run()
 
+"""
+# for test purpose
 def do_workers(args):
     print('+++workers+++')
     print(args)
@@ -370,7 +375,7 @@ def do_workers(args):
     url = _get_url(args)
     client = JobClient(base_url=url, keyfile=None)
 
-    response = client.chooseWorker(
+    response = client.chooseReceiver(
         worker1, worker2, worker3, worker4, worker5, worker6, worker7 
     )
 
@@ -420,6 +425,7 @@ def create_job(args, workerId, publisherId, start_time, end_time, deadline, base
         base)
 
     print("create job Response: {}".format(response))
+"""
 
 def _get_url(args):
     return DEFAULT_URL if args.url is None else args.url
