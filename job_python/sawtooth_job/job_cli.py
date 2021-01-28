@@ -465,8 +465,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
         do_create(args)
     elif args.command == 'list':
         do_list(args)
-    elif args.command == 'workers':
-        do_workers(args)
+    # elif args.command == 'workers':
+    #     do_workers(args)
     elif args.command == 'broadcast':
         do_broadcast(args)
     # elif args.command == 'take':
