@@ -90,7 +90,7 @@ def add_create_parser(subparsers, parent_parser):
 
     parser.add_argument(
         'data_size',
-        type=str,
+        type=float,
         help='unique identifier for the data size')
         
     parser.add_argument(
@@ -120,7 +120,7 @@ def add_create_parser(subparsers, parent_parser):
 
     parser.add_argument(
         'is_integrity',
-        type=float,
+        type=str,
         help='given is integrity')
 
     parser.add_argument(

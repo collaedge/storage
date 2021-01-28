@@ -91,7 +91,7 @@ class JobClient:
             jobId,
             receiverId,
             publisherId,
-            data_size,
+            str(data_size),
             str(start_time),
             str(expire_time),
             str(guaranteed_rt),
