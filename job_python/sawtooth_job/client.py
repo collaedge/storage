@@ -42,10 +42,10 @@ class MySubscribeCallback(SubscribeCallback):
             pubnub.publish().channel("chan-1").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
             print(message.message["msg"])
         # publisher receive responses, other servers should not take this message
-        if message.message["msg"]["des"] == ID and message.message["msg"]["type"] == "res": 
-            #publisher start to choose receiver
-            print("publisher choosing....")
-            print(message.message["msg"])
+        # if message.message["msg"]["des"] == ID and message.message["msg"]["type"] == "res": 
+        #     #publisher start to choose receiver
+        #     print("publisher choosing....")
+        #     print(message.message["msg"])
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-1").execute()
