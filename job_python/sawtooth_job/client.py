@@ -13,6 +13,7 @@ pnconfig.subscribe_key = 'sub-c-73b0bad0-500e-11eb-a73a-1eec528e8f1f'
 pnconfig.ssl = True
 
 ID = "edge_server_1"
+candidates = {}
 
 pubnub = PubNub(pnconfig)
 
@@ -22,7 +23,6 @@ def my_publish_callback(envelope, status):
         pass
 
 class MySubscribeCallback(SubscribeCallback):
-    candidates = {}
     def presence(self, pubnub, event):
         print(event.uuid)
         # pass
@@ -56,7 +56,7 @@ pubnub.subscribe().channels("chan-1").execute()
 
 ## publish a message
 while True:
-    msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size base_rewards>: ").split()
+    msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
     msg = {
         "publisher": ID,
         "type": msg_type,
