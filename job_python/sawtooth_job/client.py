@@ -31,7 +31,7 @@ class MySubscribeCallback(SubscribeCallback):
         # print status
     def message(self, pubnub, message):
         # servers, except publisher, respond the request
-    	if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
+        if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
             publisherId = message.message["msg"]["publisher"]
             print("publisher ID: ", publisherId)
             res = {
@@ -41,9 +41,12 @@ class MySubscribeCallback(SubscribeCallback):
             }
             pubnub.publish().channel("chan-1").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
             print(message.message["msg"])
-        
         # publisher receive responses, other servers should not take this message
-        if message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID:
+<<<<<<< Updated upstream
+        if message.message["msg"]["des"] == ID and message.message["msg"]["type"] == "res": 
+=======
+        if message.message["msg"]["des"] == ID and message.message["msg"]["type"] == "res":
+>>>>>>> Stashed changes
             #publisher start to choose receiver
             print("publisher choosing....")
             print(message.message["msg"])
