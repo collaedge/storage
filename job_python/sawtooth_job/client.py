@@ -5,6 +5,7 @@ from pubnub.pubnub import PubNub
 import time
 import os
 import random
+import uuid
 
 pnconfig = PNConfiguration()
 
@@ -14,6 +15,7 @@ pnconfig.ssl = True
 
 ID = "edge_server_1"
 candidates = {}
+jobs = {}
 
 pubnub = PubNub(pnconfig)
 
@@ -34,8 +36,9 @@ class MySubscribeCallback(SubscribeCallback):
         # servers, except publisher, respond the request
         if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
             publisherId = message.message["msg"]["publisher"]
-            print("publisher ID: ", publisherId)
+            jobId =  message.message["msg"]["jobId"]
             res = {
+                "jobId": jobId,
                 "candidate": ID,
                 "type": "res",
                 "des": publisherId,
@@ -46,10 +49,12 @@ class MySubscribeCallback(SubscribeCallback):
         # publisher receive responses, other servers should not take this message
         elif message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID: 
             #publisher start to choose receiver
-            candidateId = message.message["msg"]["candidate"]
-            guaranteed_rt = message.message["msg"]["guaranteed_rt"]
-            candidates[candidateId] = guaranteed_rt
-            print(candidates)
+            # candidateId = message.message["msg"]["candidate"]
+            # guaranteed_rt = message.message["msg"]["guaranteed_rt"]
+            # candidates[candidateId] = guaranteed_rt
+            time.sleep(3)
+            msgs = pubnub.history().channel("chan-1").sync()
+            print(msgs["messages"])
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-1").execute()
@@ -57,12 +62,14 @@ pubnub.subscribe().channels("chan-1").execute()
 ## publish a message
 while True:
     msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
+    jobId = str(uuid.uuid4().hex)
     msg = {
         "publisher": ID,
         "type": msg_type,
+        "jobId": jobId,
         "data_size": data_size,
         "duration": duration,
         "base_rewards": base_rewards
     }
-    if msg == 'exit': os._exit(1)
+    jobs[jobId] = msg
     pubnub.publish().channel("chan-1").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)
