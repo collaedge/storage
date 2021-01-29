@@ -43,7 +43,7 @@ class MySubscribeCallback(SubscribeCallback):
             print(message.message["msg"])
         
         # publisher receive responses, other servers should not take this message
-        if message.message["msg"]["type"] == "res" and  message.message["msg"]["des"] == ID:
+        if message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID:
             #publisher start to choose receiver
             print("publisher choosing....")
             print(message.message["msg"])
@@ -53,7 +53,7 @@ pubnub.subscribe().channels("chan-1").execute()
 
 ## publish a message
 while True:
-    msg_type, data_size, base_rewards = raw_input("Input a request info to publish separated by space <type data_size base_rewards>: ")
+    msg_type, data_size, base_rewards = input("Input a request info to publish separated by space <type data_size base_rewards>: ")
     msg = {
         "publisher": ID,
         "type": msg_type,
