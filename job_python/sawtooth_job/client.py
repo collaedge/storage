@@ -52,7 +52,7 @@ pubnub.subscribe().channels("chan-1").execute()
 
 ## publish a message
 while True:
-    msg_type, data_size, base_rewards = input("Input a request info to publish separated by space <type data_size base_rewards>: ")
+    msg_type, data_size, base_rewards = input("Input a request info to publish separated by space <type data_size base_rewards>: ").split()
     msg = {
         "publisher": ID,
         "type": msg_type,
