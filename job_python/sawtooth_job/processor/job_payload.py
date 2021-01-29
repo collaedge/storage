@@ -8,7 +8,7 @@ class JobPayload:
 
     def __init__(self, payload):
         print('+++payload: ')
-        print(payload)
+        print(payload.decode())
         try:
             # load payload
             jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity, action = payload.decode().split(",")

@@ -44,10 +44,8 @@ from sawtooth_job.job_exceptions import JobException
 def _sha512(data):
     return hashlib.sha512(data).hexdigest()
 
-# constant
-P = 0.8
-# ten days
-PERIOD = 30*24*60*60*1000
+# constant, to calculate extra rewards
+P = 10
 
 class JobClient:
     
@@ -80,7 +78,7 @@ class JobClient:
     def create(self, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, is_integrity, wait=None):
         jobId = str(uuid.uuid4())
         if test_rt < guaranteed_rt:
-            extra_rewards = round((P*(guaranteed_rt - test_rt) / guaranteed_rt)*base_rewards, 1)
+            extra_rewards = round(P*(guaranteed_rt - test_rt) / guaranteed_rt, 1)
         elif not is_integrity:
             extra_rewards = 0
             base_rewards = 0
@@ -173,9 +171,9 @@ class JobClient:
     # candidates format:
     # [receiverId,publisherId,start_time,guaranteed_rt], an array
     def chooseReceiver(self, candidates):
-        # get receivers response, pick finish time as a param
+        # get receivers response, pick start time as a param
         receivers_id = []
-        # the time receivers finish the job
+        # store all servers' guaranteed response time
         guaranteed_rts = {}
         
         for candidate in candidates:

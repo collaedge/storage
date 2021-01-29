@@ -336,7 +336,7 @@ def do_show(args):
 
 # input created job in console, to test weather a transaction can add to blockchain
 def do_create(args):
-    workerId = args.receiverId
+    receiverId = args.receiverId
     publisherId = args.publisherId
     data_size = args.data_size
     start_time = args.start_time
@@ -354,13 +354,13 @@ def do_create(args):
 
     if args.wait and args.wait > 0:
         response = client.create(
-            workerId, publisherId, data_size,
+            receiverId, publisherId, data_size,
             start_time, expire_time, guaranteed_rt, test_rt,
             base_rewards, is_integrity, wait=args.wait,
             )
     else:
         response = client.create(
-            workerId, publisherId, data_size,
+            receiverId, publisherId, data_size,
             start_time, expire_time, guaranteed_rt, test_rt,
             base_rewards, is_integrity)
 
