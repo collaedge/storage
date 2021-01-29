@@ -42,11 +42,7 @@ class MySubscribeCallback(SubscribeCallback):
             pubnub.publish().channel("chan-1").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
             print(message.message["msg"])
         # publisher receive responses, other servers should not take this message
-<<<<<<< Updated upstream
         if message.message["msg"]["des"] == ID and message.message["msg"]["type"] == "res": 
-=======
-        if message.message["msg"]["des"] == ID and message.message["msg"]["type"] == "res":
->>>>>>> Stashed changes
             #publisher start to choose receiver
             print("publisher choosing....")
             print(message.message["msg"])
