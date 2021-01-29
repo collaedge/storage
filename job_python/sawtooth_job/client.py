@@ -22,6 +22,7 @@ def my_publish_callback(envelope, status):
         pass
 
 class MySubscribeCallback(SubscribeCallback):
+    candidates = {}
     def presence(self, pubnub, event):
         print(event.uuid)
         # pass
@@ -35,6 +36,7 @@ class MySubscribeCallback(SubscribeCallback):
             publisherId = message.message["msg"]["publisher"]
             print("publisher ID: ", publisherId)
             res = {
+                "candidate": ID,
                 "type": "res",
                 "des": publisherId,
                 "guaranteed_rt": random.randint(15, 50),
@@ -44,20 +46,22 @@ class MySubscribeCallback(SubscribeCallback):
         # publisher receive responses, other servers should not take this message
         elif message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID: 
             #publisher start to choose receiver
-            print("publisher choosing....")
-            print(message.message["msg"])
+            candidateId = message.message["msg"]["candidate"]
+            guaranteed_rt = message.message["msg"]["guaranteed_rt"]
+            candidates[candidateId] = guaranteed_rt
+            print(candidates)
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-1").execute()
 
 ## publish a message
 while True:
-    msg_type, data_size, base_rewards = input("Input a request info to publish separated by space <type data_size base_rewards>: ").split()
+    msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size base_rewards>: ").split()
     msg = {
         "publisher": ID,
         "type": msg_type,
         "data_size": data_size,
-        "start_time": time.time(),
+        "duration": duration,
         "base_rewards": base_rewards
     }
     if msg == 'exit': os._exit(1)
