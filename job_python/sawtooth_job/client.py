@@ -16,7 +16,7 @@ pnconfig.publish_key = 'pub-c-0f0864b8-4a7a-4059-89b9-1d083b503ca6'
 pnconfig.subscribe_key = 'sub-c-73b0bad0-500e-11eb-a73a-1eec528e8f1f'
 pnconfig.ssl = True
 
-ID = "edge_server_1"
+ID = "server_1"
 candidates = {}
 jobs = {}
 
@@ -61,6 +61,7 @@ class MySubscribeCallback(SubscribeCallback):
             candidateId = message.message["msg"]["candidate"]
             guaranteed_rt = message.message["msg"]["guaranteed_rt"]
             candidates[candidateId] = guaranteed_rt
+            print("candidates: ", candidates)
             # initilize job_client instance
             job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=None)
             if sys.getsizeof(candidates) >= 3:
@@ -103,16 +104,15 @@ pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-1").execute()
 
 ## publish a message
-while True:
-    msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
-    jobId = str(uuid.uuid4().hex)
-    msg = {
-        "publisher": ID,
-        "type": msg_type,
-        "jobId": jobId,
-        "data_size": data_size,
-        "duration": duration,
-        "base_rewards": base_rewards
-    }
-    jobs[jobId] = msg
-    pubnub.publish().channel("chan-1").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)
+msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
+jobId = str(uuid.uuid4().hex)
+msg = {
+    "publisher": ID,
+    "type": msg_type,
+    "jobId": jobId,
+    "data_size": data_size,
+    "duration": duration,
+    "base_rewards": base_rewards
+}
+jobs[jobId] = msg
+pubnub.publish().channel("chan-1").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)

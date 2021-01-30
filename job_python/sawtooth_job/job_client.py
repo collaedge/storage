@@ -180,6 +180,7 @@ class JobClient:
             receivers_id.append(candidateId)
             guaranteed_rts[candidateId] = float(guaranteed_rt)
 
+        print("=====guaranteed_rts: ", guaranteed_rts)
         # for candidate in candidates:
         #     # receiverId, publisherId, start_time, guaranteed_rt = candidate.split(',')
         #     receiverId, guaranteed_rt = candidate.split(',')
@@ -226,16 +227,17 @@ class JobClient:
 
 
     def normalization(self, data):
-        sorted_data = sorted(data.items(), key=lambda x: x[1])
-        max = sorted_data[len(data)-1][1]
-        min = sorted_data[0][1]
-        normalized = {}
-        for key in data.keys():
-            if max == min:
-                normalized[key] = 1
-            else:
-                normalized[key] = (data[key] - min) / (max - min)
-        return normalized
+        if data:
+            sorted_data = sorted(data.items(), key=lambda x: x[1])
+            max = sorted_data[len(data)-1][1]
+            min = sorted_data[0][1]
+            normalized = {}
+            for key in data.keys():
+                if max == min:
+                    normalized[key] = 1
+                else:
+                    normalized[key] = (data[key] - min) / (max - min)
+            return normalized
 
     def computeReputation(self, receiverIds):
         # current time in millisecond
@@ -299,11 +301,12 @@ class JobClient:
             recvBaseRewards[job['receiverId']] += job['base_rewards']
             recvExtraRewards[job['receiverId']] += job['extra_rewards']
 
-        for receiverId in receiverIds:
-            info = receiverId + ' - ' +str(recvBaseRewards[receiverId]) + ' - ' + str(recvExtraRewards[receiverId]) + ' - ' + str(round(reputation_receivers[receiverId], 3))
-            print('++++++++write log++++++++')
-            print(info)
-            logger.info(info)
+        if recvBaseRewards and recvExtraRewards:
+            for receiverId in receiverIds:
+                info = receiverId + ' - ' +str(recvBaseRewards[receiverId]) + ' - ' + str(recvExtraRewards[receiverId]) + ' - ' + str(round(reputation_receivers[receiverId], 3))
+                print('++++++++write log++++++++')
+                print(info)
+                logger.info(info)
 
         return reputation_receivers
 
