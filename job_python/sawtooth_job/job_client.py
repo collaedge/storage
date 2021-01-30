@@ -209,7 +209,7 @@ class JobClient:
 
         # compute scores for receivers, choose the best
         # call create function with parms
-        return self.chooseOne(receivers_id, normalized_guaranteed_rt, normalized_repus)
+        return self.chooseOne(receivers_id, normalized_repus, normalized_guaranteed_rt)
 
     def chooseOne(self, receivers, reputation, guaranteed_rt):
         guaranteed_rt_weight = 0.3
@@ -217,8 +217,9 @@ class JobClient:
 
         combine = {}
         for receiverId in receivers:
-            combine[receiverId] = reputation_weight*reputation[receiverId] 
-            + guaranteed_rt_weight*guaranteed_rt[receiverId]
+            repu_s = reputation_weight*reputation[receiverId] if reputation else 0
+            guar_s = guaranteed_rt_weight*guaranteed_rt[receiverId] if guaranteed_rt else 0
+            combine[receiverId] = repu_s + guar_s
         print('++++ choose one combine +++++')
         print(combine)
         s = sorted(combine.items(), key=lambda x: x[1],reverse = True)
