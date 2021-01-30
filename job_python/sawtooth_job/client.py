@@ -63,7 +63,7 @@ class MySubscribeCallback(SubscribeCallback):
             candidates[candidateId] = guaranteed_rt
             # initilize job_client instance
             job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=None)
-            if sys.getsizeof(candidates >= 3):
+            if sys.getsizeof(candidates) >= 3:
                 # choose receiver from candidates
                 receiver = job_client.chooseReceiver(candidates)
                 print("decide receiver: ",receiver)

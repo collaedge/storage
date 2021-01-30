@@ -256,6 +256,7 @@ class JobClient:
             for job in jobs.decode().split('|')
         ]
 
+        print('job_list: ', job_list)
         # construct job record for reputation computation
         # required: start_time 
         #           extra_rewards 
