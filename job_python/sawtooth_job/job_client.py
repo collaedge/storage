@@ -176,10 +176,15 @@ class JobClient:
         # store all servers' guaranteed response time
         guaranteed_rts = {}
         
-        for candidate in candidates:
-            receiverId, publisherId, start_time, guaranteed_rt = candidate.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
+        for candidateId, guaranteed_rt in candidates.items():
+            receivers_id.append(candidateId)
+            guaranteed_rts[candidateId] = float(guaranteed_rt)
+
+        # for candidate in candidates:
+        #     # receiverId, publisherId, start_time, guaranteed_rt = candidate.split(',')
+        #     receiverId, guaranteed_rt = candidate.split(',')
+        #     receivers_id.append(receiverId)
+        #     guaranteed_rts[receiverId] = float(guaranteed_rt)
             
         # get reputation of receivers
         repus = self.computeReputation(receivers_id)
@@ -216,7 +221,7 @@ class JobClient:
         print('++++ choose one combine +++++')
         print(combine)
         s = sorted(combine.items(), key=lambda x: x[1],reverse = True)
-
+        # return (receiverId, guaranteed_rt)
         return s[0]
 
 

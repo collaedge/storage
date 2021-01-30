@@ -6,6 +6,9 @@ import time
 import os
 import random
 import uuid
+import sys
+
+from sawtooth_job.job_client import JobClient
 
 pnconfig = PNConfiguration()
 
@@ -37,24 +40,64 @@ class MySubscribeCallback(SubscribeCallback):
         if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
             publisherId = message.message["msg"]["publisher"]
             jobId =  message.message["msg"]["jobId"]
+            data_size = message.message["msg"]["data_size"]
+            duration = message.message["msg"]["duration"]
+            base_rewards = message.message["msg"]["base_rewards"]
             res = {
                 "jobId": jobId,
                 "candidate": ID,
                 "type": "res",
                 "des": publisherId,
                 "guaranteed_rt": random.randint(15, 50),
+                "data_size": data_size,
+                "duration": duration,
+                "base_rewards": base_rewards
             }
             pubnub.publish().channel("chan-1").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
             print(message.message["msg"])
         # publisher receive responses, other servers should not take this message
         elif message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID: 
-            #publisher start to choose receiver
-            # candidateId = message.message["msg"]["candidate"]
-            # guaranteed_rt = message.message["msg"]["guaranteed_rt"]
-            # candidates[candidateId] = guaranteed_rt
-            time.sleep(3)
-            msgs = pubnub.history().channel("chan-1").sync()
-            print(msgs["messages"])
+            # publisher start to choose receiver
+            candidateId = message.message["msg"]["candidate"]
+            guaranteed_rt = message.message["msg"]["guaranteed_rt"]
+            candidates[candidateId] = guaranteed_rt
+            # initilize job_client instance
+            job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=None)
+            if sys.getsizeof(candidates >= 3):
+                # choose receiver from candidates
+                receiver = job_client.chooseReceiver(candidates)
+                print("decide receiver: ",receiver)
+                # send files to the receiver
+                #############
+                ###############
+
+                # notify others to validate data and response time from receiver
+                jobId = message.message["msg"]["jobId"]
+                publisherId = ID
+                receiverId = receiver[0]
+                guaranteed_rt = receiver[1]
+                data_size = message.message["msg"]["data_size"]
+                start_time = time.time()*1000
+                expire_time = start_time + float(message.message["msg"]["duration"])
+
+                dec = {
+                    "type": "dec",
+                    "jobId": jobId,
+                    "receiverId": receiverId,
+                    "publisherId": publisherId,
+                    "data_size": data_size,
+                    "start_time": start_time,
+                    "expire_time": expire_time,
+                    "guaranteed_rt": guaranteed_rt,
+                }
+                # send 
+                pubnub.publish().channel("chan-1").message({"id": ID,"msg":dec}).pn_async(my_publish_callback)
+        # other servers, except receiver, receive the publisher's decision
+        elif message.message["msg"]["type"] == "dec" \
+                and message.message["msg"]["publisherId"] != ID \
+                and message.message["msg"]["receiverId"] != ID:
+            
+            print("notified: ",  message.message["msg"])
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-1").execute()
