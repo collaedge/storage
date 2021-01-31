@@ -43,6 +43,8 @@ class MySubscribeCallback(SubscribeCallback):
             data_size = message.message["msg"]["data_size"]
             duration = message.message["msg"]["duration"]
             base_rewards = message.message["msg"]["base_rewards"]
+            req_time = message.message["msg"]["time_stamp"]
+
             res = {
                 "jobId": jobId,
                 "candidate": ID,
@@ -51,7 +53,8 @@ class MySubscribeCallback(SubscribeCallback):
                 "guaranteed_rt": random.randint(15, 50),
                 "data_size": data_size,
                 "duration": duration,
-                "base_rewards": base_rewards
+                "base_rewards": base_rewards,
+                "req_time": req_time
             }
             pubnub.publish().channel("chan-1").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
             print(message.message["msg"])
@@ -61,7 +64,9 @@ class MySubscribeCallback(SubscribeCallback):
             candidateId = message.message["msg"]["candidate"]
             guaranteed_rt = message.message["msg"]["guaranteed_rt"]
             candidates[candidateId] = guaranteed_rt
+            receive_time = time.time()*1000
             print("candidates: ", candidates)
+            print("receive time: ", receive_time - message.message["msg"]["req_time"])
             if len(candidates) >= 3:
                 # initilize job_client instance
                 job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=None)
@@ -99,6 +104,8 @@ class MySubscribeCallback(SubscribeCallback):
                 and message.message["msg"]["receiverId"] != ID:
             
             print("notified: ",  message.message["msg"])
+            # start to validate data
+
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-1").execute()
@@ -112,7 +119,8 @@ msg = {
     "jobId": jobId,
     "data_size": data_size,
     "duration": duration,
-    "base_rewards": base_rewards
+    "base_rewards": base_rewards,
+    "time_stamp": time.time()*1000
 }
 jobs[jobId] = msg
 pubnub.publish().channel("chan-1").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)

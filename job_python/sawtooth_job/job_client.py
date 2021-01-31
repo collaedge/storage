@@ -100,72 +100,6 @@ class JobClient:
             "create",
             wait=wait,
             )
-    """
-    # get job response as input, choose a receiver
-    def chooseReceiver(self, receiver1, receiver2, receiver3, receiver4, receiver5, receiver6, receiver7):
-        # get receivers response, pick finish time as a param
-        receivers_id = []
-        # the time receivers finish the job
-        guaranteed_rts = {}
-        if receiver1 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver1.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-
-        if receiver2 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver2.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-
-        if receiver3 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver3.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-
-        if receiver4 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver4.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-        
-        if receiver5 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver5.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-
-        if receiver6 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver6.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-
-        if receiver7 is not None:
-            receiverId, publisherId, start_time, guaranteed_rt = receiver7.split(',')
-            receivers_id.append(receiverId)
-            guaranteed_rts[receiverId] = float(guaranteed_rt)
-
-        # get reputation of receivers
-        repus = self.computeReputation(receivers_id)
-        print('++++ reputation +++++')
-        print(repus)
-        
-        # print('++++ receiver_delays +++++')
-        # print(receiver_delays)
-
-        # print('++++ working_time +++++')
-        # print(working_time)
-
-        normalized_guaranteed_rt = self.normalization(guaranteed_rts)
-        normalized_repus = self.normalization(repus)
-        # print('++++ normalized_working_time +++++')
-        # print(normalized_working_time)
-        # print('++++ normalized_delay +++++')
-        # print(normalized_delay)
-        # print('++++ normalized_repus +++++')
-        # print(normalized_repus)
-
-        # compute scores for receivers, choose the best
-        # call create function with parms
-        return self.chooseOne(receivers_id, normalized_guaranteed_rt, normalized_repus)
-    """
 
     # get job response as input, choose a receiver
     # candidates format:
@@ -198,8 +132,9 @@ class JobClient:
         # print('++++ working_time +++++')
         # print(working_time)
 
-        normalized_guaranteed_rt = self.normalization(guaranteed_rts)
-        normalized_repus = self.normalization(repus)
+        normalized_repus = self.normalization("repu", repus)
+        normalized_guaranteed_rt = self.normalization("rt", guaranteed_rts)
+        
         # print('++++ normalized_working_time +++++')
         # print(normalized_working_time)
         # print('++++ normalized_delay +++++')
@@ -212,8 +147,8 @@ class JobClient:
         return self.chooseOne(receivers_id, normalized_repus, normalized_guaranteed_rt)
 
     def chooseOne(self, receivers, reputation, guaranteed_rt):
-        guaranteed_rt_weight = 0.3
-        reputation_weight = 0.7
+        guaranteed_rt_weight = 0.5
+        reputation_weight = 0.5
 
         combine = {}
         for receiverId in receivers:
@@ -227,7 +162,7 @@ class JobClient:
         return s[0]
 
 
-    def normalization(self, data):
+    def normalization(self, target_type, data):
         if data:
             sorted_data = sorted(data.items(), key=lambda x: x[1])
             max = sorted_data[len(data)-1][1]
@@ -236,9 +171,12 @@ class JobClient:
             for key in data.keys():
                 if max == min:
                     normalized[key] = 1
-                else:
+                elif target_type == "repu":
                     normalized[key] = (data[key] - min) / (max - min)
+                elif target_type == "rt":
+                    normalized[key] = (max - data[key]) / (max - min)
             return normalized
+
 
     def computeReputation(self, receiverIds):
         # current time in millisecond
