@@ -28,9 +28,6 @@ def my_publish_callback(envelope, status):
     if not status.is_error():
         pass
 
-def callback(response, status):
-    pass
-
 class MySubscribeCallback(SubscribeCallback):
     def presence(self, pubnub, event):
         print(event.uuid)
@@ -60,7 +57,7 @@ class MySubscribeCallback(SubscribeCallback):
                 "base_rewards": base_rewards,
                 "req_time": req_time
             }
-            pubnub.publish().channel("chan-message ").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
+            pubnub.publish().channel("chan-message").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
             print(message.message["msg"])
         # publisher receive responses, other servers should not take this message
         elif message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID: 
@@ -123,7 +120,7 @@ class MySubscribeCallback(SubscribeCallback):
                     message({"id": ID, "msg": sent_file}).\
                     should_store(True).\
                     ttl(float(message.message["msg"]["duration"])).\
-                    file_object(fd.read()).pn_async(callback)
+                    file_object(fd.read()).sync()
 
 
                 f_name = store_path + '/' + jobId + '.txt'
@@ -134,7 +131,7 @@ class MySubscribeCallback(SubscribeCallback):
                     message({"id": ID, "msg": sent_file}).\
                     should_store(True).\
                     ttl(float(message.message["msg"]["duration"])).\
-                    file_object(fd.read()).pn_async(callback)
+                    file_object(fd.read()).sync()
 
                 dec = {
                     "type": "dec",
@@ -150,7 +147,7 @@ class MySubscribeCallback(SubscribeCallback):
                 # ###### generate Tag for integrity validation
 
                 # notify others to validate data and response time from receiver 
-                pubnub.publish().channel("chan-message ").message({"id": ID,"msg":dec}).pn_async(my_publish_callback)
+                pubnub.publish().channel("chan-message").message({"id": ID,"msg":dec}).pn_async(my_publish_callback)
         # other servers, except receiver, receive the publisher's decision
         elif message.message["msg"]["type"] == "dec" \
                 and message.message["msg"]["publisherId"] != ID \
@@ -173,7 +170,8 @@ class MySubscribeCallback(SubscribeCallback):
             receive_head = time.time()*1000
 
 pubnub.add_listener(MySubscribeCallback())
-pubnub.subscribe().channels("chan-message ", "chan-storage").execute()
+pubnub.subscribe().channels("chan-message").execute()
+pubnub.subscribe().channels("chan-storage").execute()
 
 ## publish a message
 msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
