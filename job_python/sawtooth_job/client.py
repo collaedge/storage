@@ -48,7 +48,7 @@ def send_files(message, sent_file):
     f_name_head = store_path + '/' + jobId + '_head.txt'
     with open(f_name_head, 'rb') as fd:
         enve = pubnub.send_file().\
-            channel("chan-storage").\
+            channel("chan-message").\
             file_name(f_name_head).\
             message({"id": ID, "msg": sent_file}).\
             ttl(float(message.message["msg"]["duration"])).\
@@ -56,7 +56,7 @@ def send_files(message, sent_file):
     f_name = store_path + '/' + jobId + '.txt'
     with open(f_name_head, 'rb') as fd:
         enve = pubnub.send_file().\
-            channel("chan-storage").\
+            channel("chan-message").\
             file_name(f_name).\
             message({"id": ID, "msg": sent_file}).\
             ttl(float(message.message["msg"]["duration"])).\
@@ -154,13 +154,13 @@ class MySubscribeCallback(SubscribeCallback):
             # start to validate data
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             # receiver downloads file to store
-            result = pubnub.list_files().channel("chan-storage").sync()
+            result = pubnub.list_files().channel("chan-message").sync()
 
             for id, name, created in result.data:
                 print(id + ',' + name + ',' + created)
             
             # download_envelope = pubnub.download_file().\
-            #     channel("chan-storage").\
+            #     channel("chan-message").\
             #     file_id(message.message["msg"]["jobId"]+'_head.txt').\
             #     file_name("knights_of_ni.jpg").sync()
             # receive one block, compute response time
@@ -168,7 +168,6 @@ class MySubscribeCallback(SubscribeCallback):
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-message").execute()
-pubnub.subscribe().channels("chan-storage").execute()
 
 ## publish a message
 msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
