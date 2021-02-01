@@ -20,6 +20,7 @@ pnconfig.ssl = True
 ID = "server_1"
 candidates = {}
 jobs = {}
+BLOCL_SIZE = 8000 # bit
 
 pubnub = PubNub(pnconfig)
 
@@ -27,6 +28,39 @@ def my_publish_callback(envelope, status):
     # Check whether request successfully completed or not
     if not status.is_error():
         pass
+def send_files(message, sent_file):
+    # prepare file data, generate random strings, one block is 8K
+    one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+    count = 125
+    i = 0
+    # head contains one block, for response time testing
+    cwd = os.getcwd()
+    if not os.path.exists('storage'):
+        os.makedirs('storage')
+    store_path = cwd + "/storage"
+    f_head = open(store_path + '/' + jobId + '_head.txt', 'w')
+    f_head.write(one_block)
+    f = open(store_path + '/' + jobId + '.txt', 'a+')
+    while i < count:
+        f.write(''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)]) + '\n')
+        i = i + 1
+    
+    f_name_head = store_path + '/' + jobId + '_head.txt'
+    with open(f_name_head, 'rb') as fd:
+        enve = pubnub.send_file().\
+            channel("chan-storage").\
+            file_name(f_name_head).\
+            message({"id": ID, "msg": sent_file}).\
+            ttl(float(message.message["msg"]["duration"])).\
+            file_object(fd).sync()
+    f_name = store_path + '/' + jobId + '.txt'
+    with open(f_name_head, 'rb') as fd:
+        enve = pubnub.send_file().\
+            channel("chan-storage").\
+            file_name(f_name).\
+            message({"id": ID, "msg": sent_file}).\
+            ttl(float(message.message["msg"]["duration"])).\
+            file_object(fd).sync()
 
 class MySubscribeCallback(SubscribeCallback):
     def presence(self, pubnub, event):
@@ -39,6 +73,7 @@ class MySubscribeCallback(SubscribeCallback):
     def message(self, pubnub, message):
         # servers, except publisher, respond the request
         if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
+            print("other servers receive publish: ",message.message["msg"])
             publisherId = message.message["msg"]["publisher"]
             jobId =  message.message["msg"]["jobId"]
             data_size = message.message["msg"]["data_size"]
@@ -58,7 +93,7 @@ class MySubscribeCallback(SubscribeCallback):
                 "req_time": req_time
             }
             pubnub.publish().channel("chan-message").message({"id": ID,"msg":res}).pn_async(my_publish_callback)
-            print(message.message["msg"])
+            
         # publisher receive responses, other servers should not take this message
         elif message.message["msg"]["type"] == "res" and message.message["msg"]["des"] == ID: 
             # publisher start to choose receiver
@@ -83,23 +118,6 @@ class MySubscribeCallback(SubscribeCallback):
                 start_time = time.time()*1000
                 expire_time = start_time + float(message.message["msg"]["duration"])
                 
-                # prepare file data, generate random strings, one block is 8K
-                one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(8000)])
-                count = 125
-                i = 0
-                # head contains one block, for response time testing
-                cwd = os.getcwd()
-                if not os.path.exists('storage'):
-                    os.makedirs('storage')
-                store_path = cwd + "/storage"
-                f_head = open(store_path + '/' + jobId + '_head.txt', 'w')
-                f_head.write(one_block)
-
-                f = open(store_path + '/' + jobId + '.txt', 'a+')
-                while i < count:
-                    f.write(''.join([random.choice(string.ascii_letters + string.digits) for _ in range(8000)]) + '\n')
-                    i = i + 1
-                
                 # send files to the receiver
                 sent_file = {
                     "type": "send_file",
@@ -111,27 +129,6 @@ class MySubscribeCallback(SubscribeCallback):
                     "expire_time": expire_time,
                     "guaranteed_rt": guaranteed_rt,
                 }
-                
-                f_name_head = store_path + '/' + jobId + '_head.txt'
-                fd = open(f_name_head, 'rb')
-                pubnub.send_file().\
-                    channel("chan-storage").\
-                    file_name(f_name_head).\
-                    message({"id": ID, "msg": sent_file}).\
-                    should_store(True).\
-                    ttl(float(message.message["msg"]["duration"])).\
-                    file_object(fd.read()).sync()
-
-
-                f_name = store_path + '/' + jobId + '.txt'
-                fd = open(f_name_head, 'rb')
-                pubnub.send_file().\
-                    channel("chan-storage").\
-                    file_name(f_name).\
-                    message({"id": ID, "msg": sent_file}).\
-                    should_store(True).\
-                    ttl(float(message.message["msg"]["duration"])).\
-                    file_object(fd.read()).sync()
 
                 dec = {
                     "type": "dec",
