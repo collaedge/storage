@@ -79,7 +79,7 @@ class MySubscribeCallback(SubscribeCallback):
             data_size = message.message["msg"]["data_size"]
             duration = message.message["msg"]["duration"]
             base_rewards = message.message["msg"]["base_rewards"]
-            req_time = message.message["msg"]["time_stamp"]
+            req_time = message.message["msg"]["req_time_stamp"]
 
             res = {
                 "jobId": jobId,
@@ -117,9 +117,10 @@ class MySubscribeCallback(SubscribeCallback):
                 data_size = message.message["msg"]["data_size"]
                 start_time = time.time()*1000
                 expire_time = start_time + float(message.message["msg"]["duration"])
+                req_time = message.message["msg"]["req_time"]
                 
                 # send files to the receiver
-                sent_file = {
+                sent_file_prop = {
                     "type": "send_file",
                     "jobId": jobId,
                     "receiverId": receiverId,
@@ -128,7 +129,10 @@ class MySubscribeCallback(SubscribeCallback):
                     "start_time": start_time,
                     "expire_time": expire_time,
                     "guaranteed_rt": guaranteed_rt,
+                    "req_time": req_time
                 }
+
+                send_files(message, sent_file_prop)
 
                 dec = {
                     "type": "dec",
@@ -153,6 +157,7 @@ class MySubscribeCallback(SubscribeCallback):
             print("notified: ",  message.message["msg"])
             # start to validate data
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
+            print('file message: ', message.message["msg"])
             # receiver downloads file to store
             result = pubnub.list_files().channel("chan-message").sync()
 
@@ -170,16 +175,16 @@ pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-message").execute()
 
 ## publish a message
-msg_type, data_size, duration, base_rewards = input("Input a request info to publish separated by space <type data_size duration base_rewards>: ").split()
+data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size duration base_rewards>: ").split()
 jobId = str(uuid.uuid4().hex)
 msg = {
     "publisher": ID,
-    "type": msg_type,
+    "type": "pub",
     "jobId": jobId,
     "data_size": data_size,
     "duration": duration,
     "base_rewards": base_rewards,
-    "time_stamp": time.time()*1000
+    "req_time_stamp": time.time()*1000
 }
 jobs[jobId] = msg
 pubnub.publish().channel("chan-message").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)
