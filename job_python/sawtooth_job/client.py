@@ -50,6 +50,7 @@ def send_files(message, sent_file):
         enve = pubnub.send_file().\
             channel("chan-message").\
             file_name(f_name_head).\
+            message({"id": ID, "msg": sent_file}).\
             file_object(fd).sync()
     pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
     
@@ -59,7 +60,6 @@ def send_files(message, sent_file):
             channel("chan-message").\
             file_name(f_name).\
             message({"id": ID, "msg": sent_file}).\
-            ttl(float(message.message["msg"]["duration"])).\
             file_object(fd).sync()
     pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
 
