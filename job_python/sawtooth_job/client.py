@@ -169,9 +169,12 @@ class MySubscribeCallback(SubscribeCallback):
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             print('file message: ', message.message["msg"])
             # receiver downloads file to store
-            result = pubnub.list_files().channel("chan-message").sync()
+            download = pubnub.download_file().\
+                channel("chan-message").\
+                file_id(message.message["msg"]["file_id"]).\
+                file_name(message.message["msg"]["jobId"] + "_head.txt").sync()
 
-            print("file: ", result)
+            print("file: ", vars(download))
             # for id, name, created in result.data:
             #     print(id + ',' + name + ',' + created)
             
