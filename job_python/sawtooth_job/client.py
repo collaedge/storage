@@ -51,7 +51,8 @@ def send_files(pubnub, message, sent_file):
             channel("chan-message").\
             file_name(f_name_head).\
             message({"id": ID, "msg": sent_file}).\
-            file_object(fd).sync()
+            file_object(fd).\
+            cipher_key("secret").sync()
         stat = getattr(enve, 'status')
         if getattr(stat, "status_code") == 204:
             result = getattr(enve, "result")
@@ -64,7 +65,8 @@ def send_files(pubnub, message, sent_file):
             channel("chan-message").\
             file_name(f_name).\
             message({"id": ID, "msg": sent_file}).\
-            file_object(fd).sync()
+            file_object(fd).\
+            cipher_key("secret").sync()
         stat = getattr(enve, 'status')
         # print("sent file: ", vars(stat))
         if getattr(stat, "status_code") == 204:
@@ -172,7 +174,8 @@ class MySubscribeCallback(SubscribeCallback):
             download = pubnub.download_file().\
                 channel("chan-message").\
                 file_id(message.message["msg"]["file_id"]).\
-                file_name(message.message["msg"]["jobId"] + "_head.txt").sync()
+                file_name(message.message["msg"]["jobId"] + "_head.txt").\
+                cipher_key("secret").sync()
 
             print("file: ", vars(download))
             # for id, name, created in result.data:
