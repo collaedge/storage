@@ -28,6 +28,22 @@ def my_publish_callback(envelope, status):
     # Check whether request successfully completed or not
     if not status.is_error():
         pass
+
+def send_files(pubnub, message, sent_file):
+    one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+    count = 125
+    i = 0
+    # head contains one block, for response time testing
+    sent_file['file_head'] = one_block
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
+
+    content = ''
+    while i < count:
+        content = '\n'.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+        i = i + 1
+    sent_file['file_body'] = content
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
+'''
 def send_files(pubnub, message, sent_file):
     # prepare file data, generate random strings, one block is 8K
     one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
@@ -58,7 +74,7 @@ def send_files(pubnub, message, sent_file):
         if getattr(stat, "status_code") == 204:
             result = getattr(enve, "result")
             sent_file["file_id"] = getattr(result, 'file_id')
-            sent_file["file_name"] = getattr(result, f_name_head)
+            sent_file["file_name"] = jobId + '_head.txt'
             pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
     
     f_name = store_path + '/' + jobId + '.txt'
@@ -75,8 +91,9 @@ def send_files(pubnub, message, sent_file):
         if getattr(stat, "status_code") == 204:
             result = getattr(enve, "result")
             sent_file["file_id"] = getattr(result, 'file_id')
-            sent_file["file_name"] = getattr(result, f_name)
+            sent_file["file_name"] = jobId + '.txt'
             pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
+'''
 
 class MySubscribeCallback(SubscribeCallback):
     def presence(self, pubnub, event):
@@ -174,11 +191,11 @@ class MySubscribeCallback(SubscribeCallback):
             # start to validate data
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             print('file message: ', message.message["msg"])
-            file_id = message.message["msg"]["file_id"]
-            file_name = message.message["msg"]["file_name"]
-            print('file id: ', file_id)
-            print('\n')
-            print('file name: ', file_name)
+            # file_id = message.message["msg"]["file_id"]
+            # file_name = message.message["msg"]["file_name"]
+            # print('file id: ', file_id)
+            # print('\n')
+            # print('file name: ', file_name)
             # receiver downloads file to store
             # download = pubnub.download_file().\
             #     channel("chan-message").\
@@ -187,12 +204,12 @@ class MySubscribeCallback(SubscribeCallback):
             #     sync()
             #     # cipher_key("secret")
 
-            file_url = pubnub.get_file_url().\
-                channel("chan-message").\
-                file_id(file_id).\
-                file_name(file_name).sync()
+            # file_url = pubnub.get_file_url().\
+            #     channel("chan-message").\
+            #     file_id(file_id).\
+            #     file_name(file_name).sync()
 
-            print("file: ", file_url)
+            # print("file: ", file_url)
             # for id, name, created in result.data:
             #     print(id + ',' + name + ',' + created)
             
