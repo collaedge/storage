@@ -39,7 +39,8 @@ def send_files(pubnub, message, sent_file):
 
     content = ''
     while i < count:
-        content = '\n'.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+        tmp_str = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+        content = content + tmp_str + '\n'
         i = i + 1
     sent_file['file_body'] = content
     pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
