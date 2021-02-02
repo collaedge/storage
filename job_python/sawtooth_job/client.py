@@ -52,11 +52,13 @@ def send_files(pubnub, message, sent_file):
             file_name(f_name_head).\
             message({"id": ID, "msg": sent_file}).\
             file_object(fd).\
-            cipher_key("secret").sync()
+            sync()
+            # cipher_key("secret").
         stat = getattr(enve, 'status')
         if getattr(stat, "status_code") == 204:
             result = getattr(enve, "result")
             sent_file["file_id"] = getattr(result, 'file_id')
+            sent_file["file_name"] = getattr(result, f_name_head)
             pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
     
     f_name = store_path + '/' + jobId + '.txt'
@@ -66,12 +68,14 @@ def send_files(pubnub, message, sent_file):
             file_name(f_name).\
             message({"id": ID, "msg": sent_file}).\
             file_object(fd).\
-            cipher_key("secret").sync()
+            sync()
+            # cipher_key("secret").
         stat = getattr(enve, 'status')
         # print("sent file: ", vars(stat))
         if getattr(stat, "status_code") == 204:
             result = getattr(enve, "result")
             sent_file["file_id"] = getattr(result, 'file_id')
+            sent_file["file_name"] = getattr(result, f_name)
             pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
 
 class MySubscribeCallback(SubscribeCallback):
@@ -170,14 +174,25 @@ class MySubscribeCallback(SubscribeCallback):
             # start to validate data
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             print('file message: ', message.message["msg"])
+            file_id = message.message["msg"]["file_id"]
+            file_name = message.message["msg"]["file_name"]
+            print('file id: ', file_id)
+            print('\n')
+            print('file name: ', file_name)
             # receiver downloads file to store
-            download = pubnub.download_file().\
-                channel("chan-message").\
-                file_id(message.message["msg"]["file_id"]).\
-                file_name(message.message["msg"]["jobId"] + "_head.txt").\
-                cipher_key("secret").sync()
+            # download = pubnub.download_file().\
+            #     channel("chan-message").\
+            #     file_id(message.message["msg"]["file_id"]).\
+            #     file_name(message.message["msg"]["jobId"] + "_head.txt").\
+            #     sync()
+            #     # cipher_key("secret")
 
-            print("file: ", vars(download))
+            file_url = pubnub.get_file_url().\
+                channel("chan-message").\
+                file_id(file_id).\
+                file_name(file_name).sync()
+
+            print("file: ", file_url)
             # for id, name, created in result.data:
             #     print(id + ',' + name + ',' + created)
             
