@@ -50,9 +50,9 @@ def send_files(message, sent_file):
         enve = pubnub.send_file().\
             channel("chan-message").\
             file_name(f_name_head).\
-            message({"id": ID, "msg": sent_file}).\
-            ttl(float(message.message["msg"]["duration"])).\
             file_object(fd).sync()
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
+    
     f_name = store_path + '/' + jobId + '.txt'
     with open(f_name_head, 'rb') as fd:
         enve = pubnub.send_file().\
@@ -61,6 +61,7 @@ def send_files(message, sent_file):
             message({"id": ID, "msg": sent_file}).\
             ttl(float(message.message["msg"]["duration"])).\
             file_object(fd).sync()
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
 
 class MySubscribeCallback(SubscribeCallback):
     def presence(self, pubnub, event):
@@ -132,7 +133,7 @@ class MySubscribeCallback(SubscribeCallback):
                     "req_time": req_time
                 }
 
-                send_files(message, sent_file_prop)
+                send_files(pubnub, message, sent_file_prop)
 
                 dec = {
                     "type": "dec",
@@ -161,8 +162,9 @@ class MySubscribeCallback(SubscribeCallback):
             # receiver downloads file to store
             result = pubnub.list_files().channel("chan-message").sync()
 
-            for id, name, created in result.data:
-                print(id + ',' + name + ',' + created)
+            print("file: ", result)
+            # for id, name, created in result.data:
+            #     print(id + ',' + name + ',' + created)
             
             # download_envelope = pubnub.download_file().\
             #     channel("chan-message").\
