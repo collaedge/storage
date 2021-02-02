@@ -39,11 +39,12 @@ def send_files(pubnub, message, sent_file):
 
     content = ''
     while i < count:
-        tmp_str = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
-        content = content + tmp_str + '\n'
+        content = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+        sent_file['file_body'] = content
+        pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
         i = i + 1
-    sent_file['file_body'] = content
-    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
+    
+    
 '''
 def send_files(pubnub, message, sent_file):
     # prepare file data, generate random strings, one block is 8K
@@ -192,6 +193,19 @@ class MySubscribeCallback(SubscribeCallback):
             # start to validate data
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             print('file message: ', message.message["msg"])
+            file_head = message.message["msg"]["file_head"]
+            file_body = message.message["msg"]["file_body"]
+            cwd = os.getcwd()
+            if not os.path.exists('storage'):
+                os.makedirs('storage')
+            store_path = cwd + "/storage"
+            f = open(store_path + '/' + jobId + '.txt', 'a+')
+            if file_head:
+                f.write(file_head + '\n')
+                receive_head = time.time()*1000
+                print("upload response time: ", receive_head - message.message["msg"]["req_time"])
+            elif file_body:
+                f.write(file_body + '\n')
             # file_id = message.message["msg"]["file_id"]
             # file_name = message.message["msg"]["file_name"]
             # print('file id: ', file_id)
@@ -219,7 +233,6 @@ class MySubscribeCallback(SubscribeCallback):
             #     file_id(message.message["msg"]["jobId"]+'_head.txt').\
             #     file_name("knights_of_ni.jpg").sync()
             # receive one block, compute response time
-            receive_head = time.time()*1000
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-message").execute()
