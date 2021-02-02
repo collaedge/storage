@@ -34,13 +34,15 @@ def send_files(pubnub, message, sent_file):
     count = 125
     i = 0
     # head contains one block, for response time testing
-    sent_file['file_head'] = one_block
+    sent_file['file'] = one_block
+    sent_file['is_head'] = True
     pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
 
     content = ''
     while i < count:
         content = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
-        sent_file['file_body'] = content
+        sent_file['is_head'] = False
+        sent_file['file'] = content
         pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
         i = i + 1
     
@@ -193,19 +195,19 @@ class MySubscribeCallback(SubscribeCallback):
             # start to validate data
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             print('file message: ', message.message["msg"])
-            file_head = message.message["msg"]["file_head"]
-            file_body = message.message["msg"]["file_body"]
+            is_head = message.message["msg"]["is_head"]
+            file_content = message.message["msg"]["file"]
             cwd = os.getcwd()
             if not os.path.exists('storage'):
                 os.makedirs('storage')
             store_path = cwd + "/storage"
             f = open(store_path + '/' + jobId + '.txt', 'a+')
-            if file_head:
-                f.write(file_head + '\n')
+            if is_head:
+                f.write(file_content + '\n')
                 receive_head = time.time()*1000
                 print("upload response time: ", receive_head - message.message["msg"]["req_time"])
-            elif file_body:
-                f.write(file_body + '\n')
+            elif is_head:
+                f.write(file_content + '\n')
             # file_id = message.message["msg"]["file_id"]
             # file_name = message.message["msg"]["file_name"]
             # print('file id: ', file_id)
