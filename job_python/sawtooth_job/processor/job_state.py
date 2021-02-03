@@ -25,13 +25,13 @@ def _make_job_address(jobId):
 
 
 class Job:
-    def __init__(self, jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity):
+    def __init__(self, jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity):
         self.jobId = jobId
         self.receiverId = receiverId
         self.publisherId = publisherId
         self.data_size = data_size
         self.start_time = start_time
-        self.expire_time = expire_time
+        self.duration = duration
         self.guaranteed_rt = guaranteed_rt
         self.test_rt = test_rt
         self.base_rewards = base_rewards
@@ -132,9 +132,9 @@ class JobState:
         jobs = {}
         try:
             for job in data.decode().split("|"):
-                jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job.split(",")
+                jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job.split(",")
                                 
-                jobs[jobId] = Job(jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity)
+                jobs[jobId] = Job(jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity)
         except ValueError:
             raise InternalError("Failed to deserialize job data")
 
@@ -153,7 +153,7 @@ class JobState:
         job_strs = []
         for jobId, job in jobs.items():
             job_str = ",".join(
-                [jobId, job.receiverId, job.publisherId, job.data_size, job.start_time, job.expire_time, job.guaranteed_rt, job.test_rt, job.base_rewards, job.extra_rewards, job.is_integrity])
+                [jobId, job.receiverId, job.publisherId, job.data_size, job.start_time, job.duration, job.guaranteed_rt, job.test_rt, job.base_rewards, job.extra_rewards, job.is_integrity])
             job_strs.append(job_str)
             print('++++++++++++job_strs: ')
             print(job_strs)

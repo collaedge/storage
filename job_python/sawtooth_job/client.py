@@ -33,6 +33,9 @@ def send_files(pubnub, message, sent_file):
     one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
     count = 125
     i = 0
+
+    files = []
+    files.append(one_block)
     # head contains one block, for response time testing
     sent_file['file'] = one_block
     sent_file['is_head'] = True
@@ -41,12 +44,38 @@ def send_files(pubnub, message, sent_file):
     content = ''
     while i < count:
         content = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
+        files.append(content)
         sent_file['is_head'] = False
         sent_file['file'] = content
         pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
         i = i + 1
-    
-    
+
+    # ###### generate Tag for integrity validation
+
+def save_file(message):
+    is_head = message.message["msg"]["is_head"]
+    file_content = message.message["msg"]["file"]
+    jobId = message.message["msg"]["jobId"]
+    cwd = os.getcwd()
+    if not os.path.exists('storage'):
+        os.makedirs('storage')
+    store_path = cwd + "/storage"
+    f = open(store_path + '/' + jobId + '.txt', 'a+')
+    if is_head:
+        f.write(file_content + '\n')
+        receive_head = time.time()*1000
+        req_time = message.message["msg"]["req_time"]
+        save_rt(cwd, req_time, receive_head)
+    elif not is_head:
+        f.write(file_content + '\n')   
+
+def save_rt(cwd, req_time, receive_head):
+    if not os.path.exists('response_times'):
+        os.makedirs('response_times')
+    store_path = cwd + "/response_times"
+    f = open(store_path + '/upload_' + ID + '.txt', 'a+')
+    f.write(receive_head - req_time + '\n')
+
 '''
 def send_files(pubnub, message, sent_file):
     # prepare file data, generate random strings, one block is 8K
@@ -153,7 +182,7 @@ class MySubscribeCallback(SubscribeCallback):
                 guaranteed_rt = receiver[1]
                 data_size = message.message["msg"]["data_size"]
                 start_time = time.time()*1000
-                expire_time = start_time + float(message.message["msg"]["duration"])
+                duration = message.message["msg"]["duration"]
                 req_time = message.message["msg"]["req_time"]
                 
                 # send files to the receiver
@@ -164,7 +193,7 @@ class MySubscribeCallback(SubscribeCallback):
                     "publisherId": publisherId,
                     "data_size": data_size,
                     "start_time": start_time,
-                    "expire_time": expire_time,
+                    "duration": duration,
                     "guaranteed_rt": guaranteed_rt,
                     "req_time": req_time
                 }
@@ -178,11 +207,9 @@ class MySubscribeCallback(SubscribeCallback):
                     "publisherId": publisherId,
                     "data_size": data_size,
                     "start_time": start_time,
-                    "expire_time": expire_time,
+                    "duration": duration,
                     "guaranteed_rt": guaranteed_rt,
                 }
-
-                # ###### generate Tag for integrity validation
 
                 # notify others to validate data and response time from receiver 
                 pubnub.publish().channel("chan-message").message({"id": ID,"msg":dec}).pn_async(my_publish_callback)
@@ -192,49 +219,12 @@ class MySubscribeCallback(SubscribeCallback):
                 and message.message["msg"]["receiverId"] != ID:
             
             print("notified: ",  message.message["msg"])
-            # start to validate data
+            # wait for upload data, start to validate data
+            time.sleep(5)
+
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
-            print('file message: ', message.message["msg"])
-            is_head = message.message["msg"]["is_head"]
-            file_content = message.message["msg"]["file"]
-            cwd = os.getcwd()
-            if not os.path.exists('storage'):
-                os.makedirs('storage')
-            store_path = cwd + "/storage"
-            f = open(store_path + '/' + jobId + '.txt', 'a+')
-            if is_head:
-                f.write(file_content + '\n')
-                receive_head = time.time()*1000
-                print("upload response time: ", receive_head - message.message["msg"]["req_time"])
-            elif is_head:
-                f.write(file_content + '\n')
-            # file_id = message.message["msg"]["file_id"]
-            # file_name = message.message["msg"]["file_name"]
-            # print('file id: ', file_id)
-            # print('\n')
-            # print('file name: ', file_name)
-            # receiver downloads file to store
-            # download = pubnub.download_file().\
-            #     channel("chan-message").\
-            #     file_id(message.message["msg"]["file_id"]).\
-            #     file_name(message.message["msg"]["jobId"] + "_head.txt").\
-            #     sync()
-            #     # cipher_key("secret")
-
-            # file_url = pubnub.get_file_url().\
-            #     channel("chan-message").\
-            #     file_id(file_id).\
-            #     file_name(file_name).sync()
-
-            # print("file: ", file_url)
-            # for id, name, created in result.data:
-            #     print(id + ',' + name + ',' + created)
-            
-            # download_envelope = pubnub.download_file().\
-            #     channel("chan-message").\
-            #     file_id(message.message["msg"]["jobId"]+'_head.txt').\
-            #     file_name("knights_of_ni.jpg").sync()
-            # receive one block, compute response time
+            #print('file message: ', message.message["msg"])
+            save_file(message)
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-message").execute()

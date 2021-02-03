@@ -75,7 +75,7 @@ def add_create_parser(subparsers, parent_parser):
         'create',
         help='Creates a new job transaction',
         description='Creates a new job transaction with <receiverId> <publisherId>'
-        '<data_size> <start_time> <expire_time> <guaranteed_rt> <test_rt> <base_rewards> <is_integrity>.',
+        '<data_size> <start_time> <duration> <guaranteed_rt> <test_rt> <base_rewards> <is_integrity>.',
         parents=[parent_parser])
 
     parser.add_argument(
@@ -99,9 +99,9 @@ def add_create_parser(subparsers, parent_parser):
         help='job start time')
 
     parser.add_argument(
-        'expire_time',
+        'duration',
         type=float,
-        help='job expire time')
+        help='job duration time')
     
     parser.add_argument(
         'guaranteed_rt',
@@ -340,7 +340,7 @@ def do_create(args):
     publisherId = args.publisherId
     data_size = args.data_size
     start_time = args.start_time
-    expire_time = args.expire_time
+    duration = args.duration
     guaranteed_rt = args.guaranteed_rt
     test_rt = args.test_rt
     base_rewards = args.base_rewards
@@ -355,13 +355,13 @@ def do_create(args):
     if args.wait and args.wait > 0:
         response = client.create(
             receiverId, publisherId, data_size,
-            start_time, expire_time, guaranteed_rt, test_rt,
+            start_time, duration, guaranteed_rt, test_rt,
             base_rewards, is_integrity, wait=args.wait,
             )
     else:
         response = client.create(
             receiverId, publisherId, data_size,
-            start_time, expire_time, guaranteed_rt, test_rt,
+            start_time, duration, guaranteed_rt, test_rt,
             base_rewards, is_integrity)
 
     print("Response: {}".format(response))
