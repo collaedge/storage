@@ -300,7 +300,7 @@ class MySubscribeCallback(SubscribeCallback):
 
             if not os.path.exists('test_results'):
                 os.makedirs('test_results')
-            result_path = cwd + "/test_results"
+            result_path = os.getcwd() + "/test_results"
             f = open(result_path + '/rt_results.txt', 'a+')
             if test_rt < guaranteed_rt:
                 f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + start_time + '\n')
