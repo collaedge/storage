@@ -75,8 +75,7 @@ class JobClient:
             .new_signer(private_key)
 
     # propose a job record
-    def create(self, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, is_integrity, wait=None):
-        jobId = str(uuid.uuid4())
+    def create(self, jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, is_integrity, wait=None):
         if test_rt < guaranteed_rt:
             extra_rewards = round(P*(guaranteed_rt - test_rt) / guaranteed_rt, 1)
         elif not is_integrity:
@@ -91,7 +90,7 @@ class JobClient:
             publisherId,
             str(data_size),
             str(start_time),
-            str(expire_time),
+            str(duration),
             str(guaranteed_rt),
             str(test_rt),
             str(base_rewards),
@@ -205,7 +204,7 @@ class JobClient:
         jobs = []
         if job_list is not None:
             for job_data in job_list:
-                jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job_data
+                jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job_data
                 # store jobs according to receiverId
                 job_record.setdefault(receiverId, []).append({
                     'start_time': start_time,
@@ -394,7 +393,7 @@ class JobClient:
                     publisherId,
                     data_size,
                     start_time,
-                    expire_time,
+                    duration,
                     guaranteed_rt,
                     test_rt,
                     base_rewards,
@@ -403,7 +402,7 @@ class JobClient:
                     action,
                     wait=None):
         # Serialization is just a delimited utf-8 encoded string
-        payload = ",".join([jobId, receiverId, publisherId, data_size, start_time, expire_time,
+        payload = ",".join([jobId, receiverId, publisherId, data_size, start_time, duration,
                             guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity, action]).encode()
 
         print('client payload: ')
