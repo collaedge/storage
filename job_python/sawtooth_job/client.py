@@ -201,6 +201,8 @@ class MySubscribeCallback(SubscribeCallback):
                 }
 
                 send_files(pubnub, message, sent_file_prop)
+
+                print('sent files')
                 '''
                 generate a group of random number to indicate each server pick a time to start validation process
                 do it later
@@ -218,6 +220,7 @@ class MySubscribeCallback(SubscribeCallback):
                
                 # notify others to validate data and response time from receiver 
                 pubnub.publish().channel("chan-message").message({"id": ID,"msg":dec}).pn_async(my_publish_callback)
+                print('publisher sent decision message')
         # other servers, except receiver, receive the publisher's decision
         elif message.message["msg"]["type"] == "dec" \
                 and message.message["msg"]["receiverId"] != ID:
@@ -248,12 +251,17 @@ class MySubscribeCallback(SubscribeCallback):
 
             # send validation message
             pubnub.publish().channel("chan-message").message({"id": ID,"msg":val}).pn_async(my_publish_callback)
+            print('+++other servers sent validation messages++++')
 
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             #print('file message: ', message.message["msg"])
+            s = time.time()*1000
             save_file(message)
+            e = time.time()*1000
+            print('++++save file cost: ', e - s)
         # receiver get validation message
         elif message.message["msg"]["type"] == "val" and message.message["msg"]["receiverId"] == ID:
+            print('===== get validation message')
             jobId = message.message["msg"]["jobId"]
             start_time = message.message["msg"]["start_time"]
             guaranteed_rt = message.message["msg"]["guaranteed_rt"]
@@ -261,6 +269,7 @@ class MySubscribeCallback(SubscribeCallback):
             file_name =  jobId + '.txt'
             cwd = os.getcwd()
             if os.path.exists('storage'):
+                print('===== start to return a block =====')
                 store_path = cwd + "/storage"
                 f = open(store_path + '/' + file_name, 'r')
                 # return first block
@@ -275,8 +284,11 @@ class MySubscribeCallback(SubscribeCallback):
                     "guaranteed_rt": guaranteed_rt,
                     "start_validation_time": start_validation_time
                 }
+                pubnub.publish().channel("chan-message").message({"id": ID,"msg":re_val}).pn_async(my_publish_callback)
+            
         # validators receive results
         elif message.message["msg"]["type"] == "re_val" and message.message["msg"]["receiverId"] != ID:
+            print('validators receive results')
             start_time = message.message["msg"]["start_time"]
             start_validation_time = message.message["msg"]["start_validation_time"]
             receive_response_time = time.time()*1000
@@ -294,7 +306,6 @@ class MySubscribeCallback(SubscribeCallback):
                 f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + start_time + '\n')
             else:
                 f.write(jobId + ',' + receiverId + ',' + str(0) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + start_time + '\n')
-
             f.close()
 
 pubnub.add_listener(MySubscribeCallback())
@@ -319,7 +330,7 @@ pubnub.publish().channel("chan-message").message({"id": ID,"msg":msg}).pn_async(
 after duration time, propose a transaction
 call job_client.create()
 '''
-time.sleep(duration*2)
+time.sleep(float(duration)*2)
 result_path = os.getcwd() + "/test_results"
 # check weather has validated
 if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.txt'):
