@@ -232,6 +232,7 @@ class MySubscribeCallback(SubscribeCallback):
             do it later
             '''
             wait_time = random.randrange(5, 20)
+            print('------ wait ------', wait_time)
             time.sleep(wait_time)
             guaranteed_rt = message.message["msg"]["guaranteed_rt"]
             jobId = message.message["msg"]["jobId"]
@@ -303,9 +304,9 @@ class MySubscribeCallback(SubscribeCallback):
             result_path = os.getcwd() + "/test_results"
             f = open(result_path + '/rt_results.txt', 'a+')
             if test_rt < guaranteed_rt:
-                f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + start_time + '\n')
+                f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
             else:
-                f.write(jobId + ',' + receiverId + ',' + str(0) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + start_time + '\n')
+                f.write(jobId + ',' + receiverId + ',' + str(0) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
             f.close()
 
 pubnub.add_listener(MySubscribeCallback())
