@@ -8,5 +8,9 @@ dist/
 
 sawtooth_job.egg-info/
 
+sawtooth_job/storage
+sawtooth_job/test_results
+sawtooth_job/response_times
+
 build/
 .vscode/settings.json
