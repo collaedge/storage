@@ -44,7 +44,7 @@ def send_files(pubnub, message, sent_file):
     pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
 
     content = ''
-    while i < count*DATASIZE:
+    while i < count*int(DATASIZE):
         content = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
         files.append(content)
         sent_file['is_head'] = False
@@ -101,7 +101,7 @@ def send_rt_validation(pubnub, message):
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":val}).pn_async(my_publish_callback)
     print('+++other servers sent validation messages++++')
 
-def send_integrity_validation(message):
+def send_integrity_validation(pubnub, message):
     jobId = message.message["msg"]["jobId"]
 
 class MySubscribeCallback(SubscribeCallback):
@@ -116,7 +116,7 @@ class MySubscribeCallback(SubscribeCallback):
         # servers, except publisher, respond the request
         if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
             print("other servers receive publish: ",message.message["msg"])
-            publisherId = message.message["msg"]["publisher"]
+            publisherId = message.message["msg"]["publisherId"]
             jobId =  message.message["msg"]["jobId"]
             data_size = message.message["msg"]["data_size"]
             duration = message.message["msg"]["duration"]
@@ -286,7 +286,7 @@ data_size, duration, base_rewards = input("Input a request info to publish separ
 jobId = str(uuid.uuid4().hex)
 DATASIZE = data_size
 msg = {
-    "publisher": ID,
+    "publisherId": ID,
     "type": "pub",
     "jobId": jobId,
     "data_size": data_size,
@@ -309,6 +309,7 @@ result_path = os.getcwd() + "/test_results"
 if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.txt'):
     print('---- validation get results ----')
     with open(result_path + '/rt_results.txt') as f:
+        print('--- file opened ---')
         guaranteed_rt = ''
         test_rts = []
         receiverId = ''
@@ -320,15 +321,21 @@ if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.tx
             if l[0] == msg["jobId"]:
                 receiverId = l[1]
                 guaranteed_rt = l[2]
-                test_rts.append(l[3])
+                test_rts.append(float(l[3]))
                 start_time = l[4]
                 is_integrity = '1'
-            elif not l:
+            elif not result:
                 break
         # choose the median rt recorded transaction 
         test_rt = statistics.median(test_rts)
-    job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=None)   
-    job_client.create(jobId, receiverId, msg["publisherId"], data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, is_integrity)
+        print("test_rt: ", test_rt)
+    keyfile = get_keyfile(ID)
+    job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
+    job_client.create(jobId, receiverId, msg["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
 
 
+def get_keyfile(self, username):
+    home = os.path.expanduser("~")
+    key_dir = os.path.join(home, ".sawtooth", "keys")
+    return '{}/{}.priv'.format(key_dir, username)
 

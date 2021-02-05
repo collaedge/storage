@@ -153,7 +153,7 @@ class JobClient:
         for receiverId in receivers:
             repu_s = reputation_weight*reputation[receiverId] if reputation else 0
             guar_s = guaranteed_rt_weight*guaranteed_rt[receiverId] if guaranteed_rt else 0
-            combine[receiverId] = repu_s + guar_s
+            combine[receiverId] = repu_s*reputation_weight + guar_s*guaranteed_rt_weight
         print('++++ choose one combine +++++')
         print(combine)
         s = sorted(combine.items(), key=lambda x: x[1],reverse = True)
