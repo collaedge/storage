@@ -11,6 +11,7 @@ import string
 import statistics
 
 from sawtooth_job.job_client import JobClient
+from sawtooth_job.integrity_validation import *
 
 pnconfig = PNConfiguration()
 
@@ -23,6 +24,7 @@ candidates = {}
 jobs = {}
 BLOCL_SIZE = 4000 # bit = 4K
 DATASIZE = 0
+HASHIS = {}
 
 pubnub = PubNub(pnconfig)
 
@@ -31,51 +33,85 @@ def my_publish_callback(envelope, status):
     if not status.is_error():
         pass
 
-def send_files(pubnub, message, sent_file):
+def get_folder_path(folder_name):
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+    store_path = os.getcwd() + "/" + folder_name
+
+def send_tags(pubnub, message, publisherId, receiverId):
+    # generate tags for integrity validation
+    tags = tagGen(ID, jobId)
+    sent_tags = {
+        "type": "tags",
+        "jobId": jobId,
+        "publisherId": publisherId,
+        "receiverId": receiverId,
+        "tags": ('|'.join(tags)).encode('utf-8')
+    }
+    # publisher store tag blocks locally
+    store_path = get_folder_path('tagBlocks')
+    with open(store_path + '/' + ID + '_' + jobId + '.txt', 'w+') as f:
+        for tag in tags:
+            f.write(tag+'\n')
+
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_tags}).pn_async(my_publish_callback)
+
+'''
+    send files to receiver
+    send tags to all other servers (including receiver)
+'''
+def send_files(pubnub, message, sent_file_prop):
+    jobId = sent_file_prop["jobId"]
+    publisherId = sent_file_prop["publisherId"]
+    receiverId = sent_file_prop["receiverId"]
+
     one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
     count = 125
     i = 0
-
-    files = []
-    files.append(one_block)
     # head contains one block, for response time testing
-    sent_file['file'] = one_block
-    sent_file['is_head'] = True
-    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync() 
+    sent_file_prop['file'] = one_block
+    sent_file_prop['is_head'] = True
+
+    store_path = get_folder_path('files')
+    with open(store_path + '/' + ID + '_' + jobId + '.txt', 'a+') as f:
+        f.write(one_block+'\n')
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file_prop}).sync() 
 
     content = ''
     while i < count*int(DATASIZE):
         content = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
-        files.append(content)
-        sent_file['is_head'] = False
-        sent_file['file'] = content
-        pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file}).sync()
+        sent_file_prop['is_head'] = False
+        sent_file_prop['file'] = content
+        store_path = get_folder_path('files')
+        with open(store_path + '/' + ID + '_' + jobId + '.txt', 'a+') as f:
+            f.write(content+'\n')
+        pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_file_prop}).sync()
         i = i + 1
-
-    # ###### generate Tag for integrity validation
+    
+    # send tags to all other servers
+    send_tags(pubnub, message, publisherId, receiverId)
 
 def save_file(message):
     is_head = message.message["msg"]["is_head"]
     file_content = message.message["msg"]["file"]
     jobId = message.message["msg"]["jobId"]
-    cwd = os.getcwd()
-    if not os.path.exists('storage'):
-        os.makedirs('storage')
-    store_path = cwd + "/storage"
+
+    store_path = get_folder_path('storage')
     f = open(store_path + '/' + jobId + '.txt', 'a+')
     if is_head:
         f.write(file_content + '\n')
         receive_head = time.time()*1000
         req_time = message.message["msg"]["req_time"]
-        save_rt(cwd, req_time, receive_head)
+        save_rt(req_time, receive_head)
     elif not is_head:
         f.write(file_content + '\n')  
     f.close() 
 
-def save_rt(cwd, req_time, receive_head):
-    if not os.path.exists('response_times'):
-        os.makedirs('response_times')
-    store_path = cwd + "/response_times"
+'''
+    save upload response time
+'''
+def save_rt(req_time, receive_head):
+    store_path = get_folder_path('response_times')
     f = open(store_path + '/upload_' + ID + '.txt', 'a+')
     f.write(str(receive_head - req_time) + '\n')
     f.close()
@@ -101,8 +137,32 @@ def send_rt_validation(pubnub, message):
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":val}).pn_async(my_publish_callback)
     print('+++other servers sent validation messages++++')
 
+'''
+    send challenge to receiver
+'''
 def send_integrity_validation(pubnub, message):
     jobId = message.message["msg"]["jobId"]
+    publisherId = message.message["msg"]["publisherId"]
+    receiverId = message.message["msg"]["receiverId"]
+    store_path = get_folder_path('tagBlocks')
+    keys,hashis = genChallenge(store_path + '/' + publisherId + '_' + jobId+'.txt')
+
+    HASHIS[jobId] = hashis
+
+    in_val = {
+        "type": "in_val",
+        "jobId": jobId,
+        "publisherId": publisherId,
+        "receiverId": receiverId,
+        "chal": ('|'.join(keys)).encode('utf-8')
+    }
+    # send chal message
+    pubnub.publish().channel("chan-message").message({"id": ID,"msg":in_val}).pn_async(my_publish_callback)
+
+def get_keyfile(username):
+    home = os.path.expanduser("~")
+    key_dir = os.path.join(home, ".sawtooth", "keys")
+    return '{}/{}.priv'.format(key_dir, username)
 
 class MySubscribeCallback(SubscribeCallback):
     def presence(self, pubnub, event):
@@ -121,8 +181,17 @@ class MySubscribeCallback(SubscribeCallback):
             data_size = message.message["msg"]["data_size"]
             duration = message.message["msg"]["duration"]
             base_rewards = message.message["msg"]["base_rewards"]
+            pKey = message.message["msg"]["pKey"]
+            sKey = message.message["msg"]["sKey"]
             req_time = message.message["msg"]["req_time_stamp"]
 
+            store_path = get_folder_path('keys')
+            with open (store_path + "/" + publisherId + "_private.pem", "w+") as prv_file:
+		        prv_file.write(sKey)
+	
+            with open (store_path + "/" + publisherId + "_public.pem", "w+") as pub_file:
+                pub_file.write(pKey)
+		        
             res = {
                 "jobId": jobId,
                 "candidate": ID,
@@ -215,20 +284,20 @@ class MySubscribeCallback(SubscribeCallback):
             print('------ wait ------', wait_time)
             time.sleep(wait_time)
             
+            # asynchronous
             send_rt_validation(pubnub, message)
 
-            '''
-            integrity validation
-            '''
+            # asynchronous
             send_integrity_validation(pubnub, message)
             
-
+        # receiver save files
         elif message.message["msg"]["type"] == "send_file" and message.message["msg"]["receiverId"] == ID:
             #print('file message: ', message.message["msg"])
             s = time.time()*1000
             save_file(message)
             e = time.time()*1000
-            print('++++save file cost: ', e - s)
+            print('++++save file cost: {} ms'.format(e - s))
+
         # receiver get validation message
         elif message.message["msg"]["type"] == "val" and message.message["msg"]["receiverId"] == ID:
             print('===== get validation message')
@@ -237,10 +306,10 @@ class MySubscribeCallback(SubscribeCallback):
             guaranteed_rt = message.message["msg"]["guaranteed_rt"]
             validation_start_time = message.message["msg"]["validation_start_time"]
             file_name =  jobId + '.txt'
-            cwd = os.getcwd()
+
             if os.path.exists('storage'):
                 print('===== start to return a block =====')
-                store_path = cwd + "/storage"
+                store_path = os.getcwd() + "/storage"
                 f = open(store_path + '/' + file_name, 'r')
                 # return first block
                 one_block = f.readline()
@@ -268,15 +337,63 @@ class MySubscribeCallback(SubscribeCallback):
 
             test_rt = float(receive_response_time) - float(validation_start_time)
 
-            if not os.path.exists('test_results'):
-                os.makedirs('test_results')
-            result_path = os.getcwd() + "/test_results"
+            result_path = get_folder_path('test_results')
             f = open(result_path + '/rt_results.txt', 'a+')
             # if test_rt < guaranteed_rt:
             #     f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
             # else:
             f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
             f.close()
+        
+        # receiver and validators receive tags and store
+        elif message.message["msg"]["type"] == "tags" and message.message["msg"]["publisherId"] != ID:
+            print('validators receive tags')
+            jobId = message.message["msg"]["jobId"]
+            publisherId = message.message["msg"]["publisherId"]
+            tmp = message.message["msg"]["tags"]
+            tags = (tmp.decode('utf-8')).split('|')
+            store_path = get_folder_path('tagBlocks')
+            with open(store_path + '/' + publisherId + '_' + jobId + '.txt') as f:
+                for tag in tags:
+                    f.write(tag + '\n')
+        
+        # receiver get chals
+        elif message.message["msg"]["type"] == "in_val" and message.message["msg"]["receiverId"] == ID:
+            print('receiver get chals')
+            jobId = message.message["msg"]["jobId"]
+            publisherId = message.message["msg"]["publisherId"]
+            tmp = message.message["msg"]["chal"]
+            chal = (tmp.decode('utf-8')).split('|')
+
+            store_path = get_folder_path('storage')
+            file_name = store_path + '/' + jobId + '.txt'
+            proof = genProof(publisherId, file_name, chal)
+
+            proof = {
+                "type": "proof",
+                "jobId": jobId,
+                "publisherId": publisherId,
+                "receiverId": ID,
+                "proof": proof
+            }
+            # send proof to validators
+            pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).pn_async(my_publish_callback)
+
+        # validators receive proof
+        elif message.message["msg"]["type"] == "proof" and message.message["msg"]["receiverId"] != ID:
+            print('validators get proof')
+            publisherId = message.message["msg"]["publisherId"]
+            receiverId = message.message["msg"]["receiverId"]
+            jobId = message.message["msg"]["jobId"]
+            proof = message.message["msg"]["jobId"]
+            skey = loadPrvKey(publisherId)
+            hashis = HASHIS[jobId]
+
+            is_integrity = checkProof(proof, hashis, skey)
+            result_path = get_folder_path('test_results')
+            with open(result_path + '/integrity_results', 'a+') as f:
+                f.write(jobId + ',' + receiverId + ',' + is_integrity)
+
 
 pubnub.add_listener(MySubscribeCallback())
 pubnub.subscribe().channels("chan-message").execute()
@@ -285,6 +402,9 @@ pubnub.subscribe().channels("chan-message").execute()
 data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
 jobId = str(uuid.uuid4().hex)
 DATASIZE = data_size
+# generate public key and private key
+pKey, sKey = keyGen(ID)
+
 msg = {
     "publisherId": ID,
     "type": "pub",
@@ -292,9 +412,12 @@ msg = {
     "data_size": data_size,
     "duration": duration,
     "base_rewards": base_rewards,
+    "pKey": pKey,
+    "sKey": sKey,
     "req_time_stamp": time.time()*1000
 }
 jobs[jobId] = msg
+
 pubnub.publish().channel("chan-message").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)
 
 '''
@@ -304,7 +427,7 @@ call job_client.create()
 print('--- wait for file expire ---')
 time.sleep(float(duration)*10)
 print('--- start to propose transaction ---')
-result_path = os.getcwd() + "/test_results"
+result_path = get_folder_path('test_results')
 # check weather has validated
 if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.txt'):
     print('---- validation get results ----')
@@ -333,9 +456,4 @@ if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.tx
     job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
     job_client.create(jobId, receiverId, msg["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
 
-
-def get_keyfile(self, username):
-    home = os.path.expanduser("~")
-    key_dir = os.path.join(home, ".sawtooth", "keys")
-    return '{}/{}.priv'.format(key_dir, username)
 
