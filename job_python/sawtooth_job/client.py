@@ -145,7 +145,7 @@ def send_integrity_validation(pubnub, message):
     publisherId = message.message["msg"]["publisherId"]
     receiverId = message.message["msg"]["receiverId"]
     store_path = get_folder_path('tagBlocks')
-    keys,hashis = genChallenge(store_path + '/' + publisherId + '_' + jobId+'.txt')
+    keys,hashis = integrity_validation.genChallenge(store_path + '/' + publisherId + '_' + jobId+'.txt')
 
     HASHIS[jobId] = hashis
 
@@ -367,7 +367,7 @@ class MySubscribeCallback(SubscribeCallback):
 
             store_path = get_folder_path('storage')
             file_name = store_path + '/' + jobId + '.txt'
-            proof = genProof(publisherId, file_name, chal)
+            proof = integrity_validation.genProof(publisherId, file_name, chal)
 
             proof = {
                 "type": "proof",
@@ -386,10 +386,10 @@ class MySubscribeCallback(SubscribeCallback):
             receiverId = message.message["msg"]["receiverId"]
             jobId = message.message["msg"]["jobId"]
             proof = message.message["msg"]["jobId"]
-            skey = loadPrvKey(publisherId)
+            skey = integrity_validation.loadPrvKey(publisherId)
             hashis = HASHIS[jobId]
 
-            is_integrity = checkProof(proof, hashis, skey)
+            is_integrity = integrity_validation.checkProof(proof, hashis, skey)
             result_path = get_folder_path('test_results')
             with open(result_path + '/integrity_results', 'a+') as f:
                 f.write(jobId + ',' + receiverId + ',' + is_integrity)
@@ -403,9 +403,9 @@ data_size, duration, base_rewards = input("Input a request info to publish separ
 jobId = str(uuid.uuid4().hex)
 DATASIZE = data_size
 # generate public key and private key
-pKey, sKey = keyGen(ID)
+pKey, sKey = integrity_validation.keyGen(ID)
 
-msg = {
+pub = {
     "publisherId": ID,
     "type": "pub",
     "jobId": jobId,
@@ -416,9 +416,9 @@ msg = {
     "sKey": sKey,
     "req_time_stamp": time.time()*1000
 }
-jobs[jobId] = msg
+jobs[jobId] = pub
 
-pubnub.publish().channel("chan-message").message({"id": ID,"msg":msg}).pn_async(my_publish_callback)
+pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
 
 '''
 after duration time, propose a transaction
