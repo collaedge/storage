@@ -23,10 +23,10 @@ def keyGen(id):
         os.makedirs('keys')
     store_path = os.getcwd() + "/keys"
     with open (store_path + "/" + id + "_private.pem", "w") as prv_file:
-		print("{}".format(RSAkeyPair.exportKey().decode("utf-8")), file=prv_file)
+        print("{}".format(RSAkeyPair.exportKey().decode("utf-8")), file=prv_file)
 	
     with open (store_path + "/" + id + "_public.pem", "w") as pub_file:
-		print("{}".format(PubKey.exportKey().decode("utf-8")), file=pub_file)
+        print("{}".format(PubKey.exportKey().decode("utf-8")), file=pub_file)
     
     return PubKey, RSAkeyPair
 
@@ -34,16 +34,16 @@ def loadPrvKey(id):
     skey = ''
     store_path = os.getcwd() + "/keys"
     with open (store_path + "/" + id + "_private.pem", "r") as prv_file:
-		key = prv_file.read()
-		skey =RSA.importKey(key)
+        key = prv_file.read()
+        skey =RSA.importKey(key)
     return skey
 
 def loadPubKey(id):
     pkey = ''
     store_path = os.getcwd() + "/keys"
     with open (store_path + "/" + id + "_public.pem", "r") as pub_file:
-		key = pub_file.read()
-		pkey =RSA.importKey(key)
+        key = pub_file.read()
+        pkey =RSA.importKey(key)
     return pkey
 
 '''
@@ -61,7 +61,7 @@ def getsample(data, num = None):
     #     for i in result_List:
     #         blocks[i] = data[i]
 
-	return blocks
+    return blocks
 
 '''
     data publisher generates tags for each block
@@ -71,7 +71,7 @@ def tagGen(serverId, jobId):
     with open(os.getcwd() + "/files/" + serverId + '_' + jobId,'rb') as file:
         data = file.readlines()
 		
-	blocks = getsample(data)
+    blocks = getsample(data)
     tags = []
     for key, value in blocks.items():
         hashi = SHA256.new(value).hexdigest()
@@ -89,19 +89,19 @@ def genChallenge(file_name):
     left = int(math.log(N,2))
     right = left*10
     if left >= k:
-		m = randrange(1,k+1)
+        m = randrange(1,k+1)
     elif k > right:
-		m = randrange(left,right)
+        m = randrange(left,right)
     else:
-		m = randrange(left,k+1)
+        m = randrange(left,k+1)
     samples = random.sample(blocks,m)
 	
     hashis = []
     keys = []
     for s in samples:
-		key,value = s.split(',')
-		keys.append(key)
-		hashis.append(value)
+        key,value = s.split(',')
+        keys.append(key)
+        hashis.append(value)
     
     return keys, hashis
 

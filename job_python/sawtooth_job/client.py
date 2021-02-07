@@ -11,7 +11,7 @@ import string
 import statistics
 
 from sawtooth_job.job_client import JobClient
-from sawtooth_job.integrity_validation import *
+import integrity_validation
 
 pnconfig = PNConfiguration()
 
@@ -187,7 +187,7 @@ class MySubscribeCallback(SubscribeCallback):
 
             store_path = get_folder_path('keys')
             with open (store_path + "/" + publisherId + "_private.pem", "w+") as prv_file:
-		        prv_file.write(sKey)
+                prv_file.write(sKey)
 	
             with open (store_path + "/" + publisherId + "_public.pem", "w+") as pub_file:
                 pub_file.write(pKey)
