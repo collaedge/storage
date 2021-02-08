@@ -181,16 +181,16 @@ class MySubscribeCallback(SubscribeCallback):
             data_size = message.message["msg"]["data_size"]
             duration = message.message["msg"]["duration"]
             base_rewards = message.message["msg"]["base_rewards"]
-            # pKey = message.message["msg"]["pKey"]
-            # sKey = message.message["msg"]["sKey"]
+            pKey = message.message["msg"]["pKey"]
+            sKey = message.message["msg"]["sKey"]
             req_time = message.message["msg"]["req_time_stamp"]
 
-            # store_path = get_folder_path('keys')
-            # with open (store_path + "/" + publisherId + "_private.pem", "w+") as prv_file:
-            #     prv_file.write(sKey)
+            store_path = get_folder_path('keys')
+            with open (store_path + "/" + publisherId + "_private.pem", "w+") as prv_file:
+                prv_file.write(sKey)
 	
-            # with open (store_path + "/" + publisherId + "_public.pem", "w+") as pub_file:
-            #     pub_file.write(pKey)
+            with open (store_path + "/" + publisherId + "_public.pem", "w+") as pub_file:
+                pub_file.write(pKey)
 		        
             res = {
                 "jobId": jobId,
@@ -403,8 +403,12 @@ data_size, duration, base_rewards = input("Input a request info to publish separ
 jobId = str(uuid.uuid4().hex)
 DATASIZE = data_size
 # generate public key and private key
-integrity_validation.keyGen(ID)
+pKey, sKey = integrity_validation.keyGen(ID)
 
+pKey_str = pKey.exportKey().decode("utf-8")
+sKey_str = sKey.exportKey().decode("utf-8")
+print("pKey_str: ", type(pKey_str))
+print("sKey_str: ", type(sKey_str))
 # key_path = get_folder_path('keys')
 # with open (key_path + "/" + id + "_private.pem", "r") as prv_file:
 #     sKey_str = prv_file.read()
@@ -418,26 +422,26 @@ pub = {
     "data_size": data_size,
     "duration": duration,
     "base_rewards": base_rewards,
-    # "pKey": pKey_str,
-    # "sKey": sKey_str,
+    "pKey": pKey_str,
+    "sKey": sKey_str,
     "req_time_stamp": time.time()*1000
 }
 jobs[jobId] = pub
 
-key_path = get_folder_path('keys')
-with open (key_path + "/" + ID + "_private.pem", "r") as prv_file:
-    env = pubnub.send_file().channel("chan-message").file_name(ID + "_private.pem").\
-        should_store(True).\
-        file_object(prv_file).\
-        cipher_key("secret").sync()
-    print("env: ", vars(env))
+# key_path = get_folder_path('keys')
+# with open (key_path + "/" + ID + "_private.pem", "r") as prv_file:
+#     env = pubnub.send_file().channel("chan-message").file_name(ID + "_private.pem").\
+#         should_store(True).\
+#         file_object(prv_file).\
+#         cipher_key("secret").sync()
+#     print("env: ", vars(env))
 
-with open (key_path + "/" + ID + "_public.pem", "r") as pub_file:
-    env = pubnub.send_file().channel("chan-message").file_name(ID + "_public.pem").\
-        should_store(True).\
-        file_object(prv_file).\
-        cipher_key("secret").sync()
-    print("env: ", vars(env))
+# with open (key_path + "/" + ID + "_public.pem", "r") as pub_file:
+#     env = pubnub.send_file().channel("chan-message").file_name(ID + "_public.pem").\
+#         should_store(True).\
+#         file_object(prv_file).\
+#         cipher_key("secret").sync()
+#     print("env: ", vars(env))
 
 pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
 
