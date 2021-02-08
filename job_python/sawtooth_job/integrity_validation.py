@@ -68,14 +68,14 @@ def getsample(data, num = None):
 '''
 def tagGen(serverId, jobId):
     data = []
-    with open(os.getcwd() + "/files/" + serverId + '_' + jobId,'rb') as file:
+    with open(os.getcwd() + "/files/" + serverId + '_' + jobId + '.txt','rb') as file:
         data = file.readlines()
 		
     blocks = getsample(data)
     tags = []
     for key, value in blocks.items():
         hashi = SHA256.new(value).hexdigest()
-        tags.append(key+','+hashi)
+        tags.append(str(key)+','+hashi)
     return tags
 
 '''
@@ -110,12 +110,12 @@ def genChallenge(file_name):
 '''
 def genProof(id, file_name, tag_keys):
     pkey = loadPubKey(id)
-    with open(file_name,'rb') as file:
-	    data = file.read()
+    with open(file_name,'r') as file:
+	    data = file.readlines()
 	
     results = ""
     for key in tag_keys:
-        block = data[key]
+        block = data[int(key)]
         hashi = SHA256.new(block).hexdigest()
         results += hashi
     

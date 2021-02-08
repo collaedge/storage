@@ -36,17 +36,17 @@ def my_publish_callback(envelope, status):
 def get_folder_path(folder_name):
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
-    store_path = os.getcwd() + "/" + folder_name
+    return os.getcwd() + "/" + folder_name
 
 def send_tags(pubnub, message, publisherId, receiverId):
     # generate tags for integrity validation
-    tags = tagGen(ID, jobId)
+    tags = integrity_validation.tagGen(ID, jobId)
     sent_tags = {
         "type": "tags",
         "jobId": jobId,
         "publisherId": publisherId,
         "receiverId": receiverId,
-        "tags": ('|'.join(tags)).encode('utf-8')
+        "tags": '|'.join(tags)
     }
     # publisher store tag blocks locally
     store_path = get_folder_path('tagBlocks')
@@ -134,7 +134,7 @@ def send_rt_validation(pubnub, message):
         }
 
     # send validation message
-    pubnub.publish().channel("chan-message").message({"id": ID,"msg":val}).pn_async(my_publish_callback)
+    pubnub.publish().channel("chan-message").message({"id": ID,"msg":val}).sync()
     print('+++other servers sent validation messages++++')
 
 '''
@@ -154,10 +154,10 @@ def send_integrity_validation(pubnub, message):
         "jobId": jobId,
         "publisherId": publisherId,
         "receiverId": receiverId,
-        "chal": ('|'.join(keys)).encode('utf-8')
+        "chal": '|'.join(keys)
     }
     # send chal message
-    pubnub.publish().channel("chan-message").message({"id": ID,"msg":in_val}).pn_async(my_publish_callback)
+    pubnub.publish().channel("chan-message").message({"id": ID,"msg":in_val}).sync()
 
 def get_keyfile(username):
     home = os.path.expanduser("~")
@@ -181,16 +181,16 @@ class MySubscribeCallback(SubscribeCallback):
             data_size = message.message["msg"]["data_size"]
             duration = message.message["msg"]["duration"]
             base_rewards = message.message["msg"]["base_rewards"]
-            pKey = message.message["msg"]["pKey"]
-            sKey = message.message["msg"]["sKey"]
+            # pKey = message.message["msg"]["pKey"]
+            # sKey = message.message["msg"]["sKey"]
             req_time = message.message["msg"]["req_time_stamp"]
 
-            store_path = get_folder_path('keys')
-            with open (store_path + "/" + publisherId + "_private.pem", "w+") as prv_file:
-                prv_file.write(sKey)
+            # store_path = get_folder_path('keys')
+            # with open (store_path + "/" + publisherId + "_private.pem", "w+") as prv_file:
+            #     prv_file.write(sKey)
 	
-            with open (store_path + "/" + publisherId + "_public.pem", "w+") as pub_file:
-                pub_file.write(pKey)
+            # with open (store_path + "/" + publisherId + "_public.pem", "w+") as pub_file:
+            #     pub_file.write(pKey)
 		        
             res = {
                 "jobId": jobId,
@@ -351,9 +351,9 @@ class MySubscribeCallback(SubscribeCallback):
             jobId = message.message["msg"]["jobId"]
             publisherId = message.message["msg"]["publisherId"]
             tmp = message.message["msg"]["tags"]
-            tags = (tmp.decode('utf-8')).split('|')
+            tags = tmp.split('|')
             store_path = get_folder_path('tagBlocks')
-            with open(store_path + '/' + publisherId + '_' + jobId + '.txt') as f:
+            with open(store_path + '/' + publisherId + '_' + jobId + '.txt', 'w+') as f:
                 for tag in tags:
                     f.write(tag + '\n')
         
@@ -363,7 +363,7 @@ class MySubscribeCallback(SubscribeCallback):
             jobId = message.message["msg"]["jobId"]
             publisherId = message.message["msg"]["publisherId"]
             tmp = message.message["msg"]["chal"]
-            chal = (tmp.decode('utf-8')).split('|')
+            chal = tmp.split('|')
 
             store_path = get_folder_path('storage')
             file_name = store_path + '/' + jobId + '.txt'
@@ -403,7 +403,13 @@ data_size, duration, base_rewards = input("Input a request info to publish separ
 jobId = str(uuid.uuid4().hex)
 DATASIZE = data_size
 # generate public key and private key
-pKey, sKey = integrity_validation.keyGen(ID)
+integrity_validation.keyGen(ID)
+
+# key_path = get_folder_path('keys')
+# with open (key_path + "/" + id + "_private.pem", "r") as prv_file:
+#     sKey_str = prv_file.read()
+# with open (key_path + "/" + id + "_public.pem", "r") as pub_file:
+#     pKey_str = pub_file.read()
 
 pub = {
     "publisherId": ID,
@@ -412,11 +418,26 @@ pub = {
     "data_size": data_size,
     "duration": duration,
     "base_rewards": base_rewards,
-    "pKey": pKey,
-    "sKey": sKey,
+    # "pKey": pKey_str,
+    # "sKey": sKey_str,
     "req_time_stamp": time.time()*1000
 }
 jobs[jobId] = pub
+
+key_path = get_folder_path('keys')
+with open (key_path + "/" + id + "_private.pem", "r") as prv_file:
+    env = pubnub.send_file().channel("chan-message").file_name(id + "_private.pem").\
+        should_store(True).\
+        file_object(prv_file).\
+        cipher_key("secret").sync()
+    print("env: ", vars(env))
+
+with open (key_path + "/" + id + "_public.pem", "r") as pub_file:
+    env = pubnub.send_file().channel("chan-message").file_name(id + "_public.pem").\
+        should_store(True).\
+        file_object(prv_file).\
+        cipher_key("secret").sync()
+    print("env: ", vars(env))
 
 pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
 
@@ -441,7 +462,7 @@ if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.tx
         while True:
             result = f.readline()
             l = result.split(',')
-            if l[0] == msg["jobId"]:
+            if l[0] == pub["jobId"]:
                 receiverId = l[1]
                 guaranteed_rt = l[2]
                 test_rts.append(float(l[3]))
@@ -454,6 +475,6 @@ if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.tx
         print("test_rt: ", test_rt)
     keyfile = get_keyfile(ID)
     job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
-    job_client.create(jobId, receiverId, msg["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
+    job_client.create(jobId, receiverId, pub["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
 
 
