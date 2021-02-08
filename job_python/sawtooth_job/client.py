@@ -385,7 +385,7 @@ class MySubscribeCallback(SubscribeCallback):
             publisherId = message.message["msg"]["publisherId"]
             receiverId = message.message["msg"]["receiverId"]
             jobId = message.message["msg"]["jobId"]
-            proof = message.message["msg"]["jobId"]
+            proof = message.message["msg"]["proof"]
             skey = integrity_validation.loadPrvKey(publisherId)
             hashis = HASHIS[jobId]
 
@@ -407,13 +407,8 @@ pKey, sKey = integrity_validation.keyGen(ID)
 
 pKey_str = pKey.exportKey().decode("utf-8")
 sKey_str = sKey.exportKey().decode("utf-8")
-print("pKey_str: ", type(pKey_str))
-print("sKey_str: ", type(sKey_str))
-# key_path = get_folder_path('keys')
-# with open (key_path + "/" + id + "_private.pem", "r") as prv_file:
-#     sKey_str = prv_file.read()
-# with open (key_path + "/" + id + "_public.pem", "r") as pub_file:
-#     pKey_str = pub_file.read()
+# print("pKey_str: ", type(pKey_str))
+# print("sKey_str: ", type(sKey_str))
 
 pub = {
     "publisherId": ID,
@@ -427,21 +422,6 @@ pub = {
     "req_time_stamp": time.time()*1000
 }
 jobs[jobId] = pub
-
-# key_path = get_folder_path('keys')
-# with open (key_path + "/" + ID + "_private.pem", "r") as prv_file:
-#     env = pubnub.send_file().channel("chan-message").file_name(ID + "_private.pem").\
-#         should_store(True).\
-#         file_object(prv_file).\
-#         cipher_key("secret").sync()
-#     print("env: ", vars(env))
-
-# with open (key_path + "/" + ID + "_public.pem", "r") as pub_file:
-#     env = pubnub.send_file().channel("chan-message").file_name(ID + "_public.pem").\
-#         should_store(True).\
-#         file_object(prv_file).\
-#         cipher_key("secret").sync()
-#     print("env: ", vars(env))
 
 pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
 

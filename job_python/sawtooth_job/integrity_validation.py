@@ -116,7 +116,7 @@ def genProof(id, file_name, tag_keys):
     results = ""
     for key in tag_keys:
         block = data[int(key)]
-        hashi = SHA256.new(block).hexdigest()
+        hashi = SHA256.new(block.encode('utf-8')).hexdigest()
         results += hashi
     
     H = SHA256.new(results.encode('utf-8')).hexdigest()
@@ -142,5 +142,5 @@ def checkProof(proof, hashis, skey):
 	
 	#check validate
 	if V == p:
-		return "success"
-	return "failure"
+		return "1"
+	return "0"
