@@ -425,15 +425,15 @@ pub = {
 jobs[jobId] = pub
 
 key_path = get_folder_path('keys')
-with open (key_path + "/" + id + "_private.pem", "r") as prv_file:
-    env = pubnub.send_file().channel("chan-message").file_name(id + "_private.pem").\
+with open (key_path + "/" + ID + "_private.pem", "r") as prv_file:
+    env = pubnub.send_file().channel("chan-message").file_name(ID + "_private.pem").\
         should_store(True).\
         file_object(prv_file).\
         cipher_key("secret").sync()
     print("env: ", vars(env))
 
-with open (key_path + "/" + id + "_public.pem", "r") as pub_file:
-    env = pubnub.send_file().channel("chan-message").file_name(id + "_public.pem").\
+with open (key_path + "/" + ID + "_public.pem", "r") as pub_file:
+    env = pubnub.send_file().channel("chan-message").file_name(ID + "_public.pem").\
         should_store(True).\
         file_object(prv_file).\
         cipher_key("secret").sync()
