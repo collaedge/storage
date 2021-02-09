@@ -25,6 +25,7 @@ jobs = {}
 BLOCL_SIZE = 4000 # bit = 4K
 DATASIZE = 0
 HASHIS = {}
+PARTICIPANTS = 4
 
 pubnub = PubNub(pnconfig)
 
@@ -254,6 +255,19 @@ class MySubscribeCallback(SubscribeCallback):
                 generate a group of random number to indicate each server pick a time to start validation process
                 do it later
                 '''
+
+                portion = duration // (PARTICIPANTS - 1)
+                print('portion: ', portion)
+
+                random_times = {}
+                for i in range(PARTICIPANTS):
+                    start = 0
+                    end = portion
+                    random_times['server_'+i] = [start, end]
+                    start = end
+                    end = end*(i+1)
+                print('random_times: ', random_times)
+
                 dec = {
                     "type": "dec",
                     "jobId": jobId,

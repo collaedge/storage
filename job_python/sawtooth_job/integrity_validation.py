@@ -10,7 +10,7 @@ import numpy as np
 import math
 from random import randint, randrange
 import random
-from Crypto.Cipher import PKCS1_v1_5 as Cipher_PKCS1_v1_5
+from Crypto.Cipher import PKCS1_OAEP
 from base64 import b64decode,b64encode
 
 '''
@@ -120,7 +120,7 @@ def genProof(id, file_name, tag_keys):
         results += hashi
     
     H = SHA256.new(results.encode('utf-8')).hexdigest()
-    cipher = Cipher_PKCS1_v1_5.new(pkey)
+    cipher = PKCS1_OAEP.new(pkey)
     cipher_text = b64encode(cipher.encrypt(H.encode()))
 
     return cipher_text.decode('utf-8')
@@ -130,7 +130,7 @@ def genProof(id, file_name, tag_keys):
 '''
 def checkProof(proof, hashis, skey):
 	#decrypt
-	cipher = Cipher_PKCS1_v1_5.new(skey)
+	cipher = PKCS1_OAEP.new(skey)
 	V = cipher.decrypt(b64decode(proof),None)
 	
 	#build checkmodel from hashis
