@@ -256,16 +256,27 @@ class MySubscribeCallback(SubscribeCallback):
                 do it later
                 '''
 
-                portion = duration // (PARTICIPANTS - 1)
+                portion = float(duration) // (PARTICIPANTS - 1)
                 print('portion: ', portion)
 
                 random_times = {}
-                for i in range(PARTICIPANTS):
-                    start = 0
-                    end = portion
-                    random_times['server_'+i] = [start, end]
+                start = 0
+                end = portion
+                i = 0
+                index = 1
+                while i <  (PARTICIPANTS - 1):
+                    s_id = 'server_'+str(index)
+                    if receiverId == s_id:
+                        index += 1
+                        continue
+                    
+                    random_times[s_id] = [start, end]
                     start = end
-                    end = end*(i+1)
+                    end = start + portion
+                    index += 1
+                    i += 1
+                    
+
                 print('random_times: ', random_times)
 
                 dec = {
@@ -277,6 +288,7 @@ class MySubscribeCallback(SubscribeCallback):
                     "start_time": start_time,
                     "duration": duration,
                     "guaranteed_rt": guaranteed_rt,
+                    "random_times": random_times
                 }
                
                 # notify others to validate data and response time from receiver 
@@ -289,10 +301,11 @@ class MySubscribeCallback(SubscribeCallback):
             
             print("notified: ",  message.message["msg"])
             duration = int(message.message["msg"]["duration"])
-            '''
-            ////// here, should be a random waiting time. each server get a random time to start validation  /////
-            do it later
-            '''
+            
+            # get random validation time range
+            random_times =  message.message["random_times"]
+            print("validators get random times: ", random_times)
+
             # send files and receive files is sync, therefore, when other server receive notifications, all files are received
             wait_time = random.randrange(0, duration)
             print('------ wait ------', wait_time)

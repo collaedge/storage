@@ -131,7 +131,7 @@ def genProof(id, file_name, tag_keys):
 def checkProof(proof, hashis, skey):
 	#decrypt
 	cipher = PKCS1_OAEP.new(skey)
-	V = cipher.decrypt(b64decode(proof),None)
+	V = cipher.decrypt(b64decode(proof))
 	
 	#build checkmodel from hashis
 	results=""
