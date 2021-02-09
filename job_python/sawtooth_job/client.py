@@ -39,6 +39,26 @@ def get_folder_path(folder_name):
         os.makedirs(folder_name)
     return os.getcwd() + "/" + folder_name
 
+def generate_random_time(duration):
+    portion = float(duration) // (PARTICIPANTS - 1)
+    print('portion: ', portion)
+    random_times = {}
+    start = 0
+    end = portion
+    i = 0
+    index = 1
+    while i <  (PARTICIPANTS - 1):
+        s_id = 'server_'+str(index)
+        if receiverId == s_id:
+            index += 1
+            continue
+        
+        random_times[s_id] = [start, end]
+        start = end
+        end = start + portion
+        index += 1
+        i += 1
+
 def send_tags(pubnub, message, publisherId, receiverId):
     # generate tags for integrity validation
     tags = integrity_validation.tagGen(ID, jobId)
@@ -97,7 +117,7 @@ def save_file(message):
     file_content = message.message["msg"]["file"]
     jobId = message.message["msg"]["jobId"]
 
-    store_path = get_folder_path('storage')
+    store_path = get_folder_path('files')
     f = open(store_path + '/' + jobId + '.txt', 'a+')
     if is_head:
         f.write(file_content + '\n')
@@ -123,15 +143,13 @@ def send_rt_validation(pubnub, message):
     receiverId = message.message["msg"]["receiverId"]
     start_time = message.message["msg"]["start_time"]
 
-    validation_start_time = time.time()*1000
-
     val = {
             "type": "val",
             "jobId": jobId,
             "receiverId": receiverId,
             "start_time": start_time,
             "guaranteed_rt": guaranteed_rt,
-            "validation_start_time": validation_start_time
+            "validation_start_time": time.time()*1000
         }
 
     # send validation message
@@ -155,7 +173,8 @@ def send_integrity_validation(pubnub, message):
         "jobId": jobId,
         "publisherId": publisherId,
         "receiverId": receiverId,
-        "chal": '|'.join(keys)
+        "chal": '|'.join(keys),
+        "integrity_validation_start_time": time.time()*1000
     }
     # send chal message
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":in_val}).sync()
@@ -176,7 +195,7 @@ class MySubscribeCallback(SubscribeCallback):
     def message(self, pubnub, message):
         # servers, except publisher, respond the request
         if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
-            print("other servers receive publish: ",message.message["msg"])
+            # print("other servers receive publish: ",message.message["msg"])
             publisherId = message.message["msg"]["publisherId"]
             jobId =  message.message["msg"]["jobId"]
             data_size = message.message["msg"]["data_size"]
@@ -250,33 +269,10 @@ class MySubscribeCallback(SubscribeCallback):
 
                 send_files(pubnub, message, sent_file_prop)
 
-                print('sent files')
-                '''
-                generate a group of random number to indicate each server pick a time to start validation process
-                do it later
-                '''
-
-                portion = float(duration) // (PARTICIPANTS - 1)
-                print('portion: ', portion)
-
-                random_times = {}
-                start = 0
-                end = portion
-                i = 0
-                index = 1
-                while i <  (PARTICIPANTS - 1):
-                    s_id = 'server_'+str(index)
-                    if receiverId == s_id:
-                        index += 1
-                        continue
+                print('files sent')
+                
+                random_times = generate_random_time(duration)
                     
-                    random_times[s_id] = [start, end]
-                    start = end
-                    end = start + portion
-                    index += 1
-                    i += 1
-                    
-
                 print('random_times: ', random_times)
 
                 dec = {
@@ -300,21 +296,21 @@ class MySubscribeCallback(SubscribeCallback):
                 #and message.message["msg"]["publisherId"] != ID \
             
             print("notified: ",  message.message["msg"])
-            duration = int(message.message["msg"]["duration"])
             
             # get random validation time range
-            random_times =  message.message["random_times"]
+            random_times =  message.message["msg"]["random_times"]
+            wait_time_range = random_times[ID]
             print("validators get random times: ", random_times)
 
             # send files and receive files is sync, therefore, when other server receive notifications, all files are received
-            wait_time = random.randrange(0, duration)
+            wait_time = random.randrange(wait_time_range[0], wait_time_range[1])
             print('------ wait ------', wait_time)
             time.sleep(wait_time)
             
-            # asynchronous
+            # synchronous
             send_rt_validation(pubnub, message)
 
-            # asynchronous
+            # synchronous
             send_integrity_validation(pubnub, message)
             
         # receiver save files
@@ -334,9 +330,9 @@ class MySubscribeCallback(SubscribeCallback):
             validation_start_time = message.message["msg"]["validation_start_time"]
             file_name =  jobId + '.txt'
 
-            if os.path.exists('storage'):
+            if os.path.exists('files'):
                 print('===== start to return a block =====')
-                store_path = os.getcwd() + "/storage"
+                store_path = os.getcwd() + "/files"
                 f = open(store_path + '/' + file_name, 'r')
                 # return first block
                 one_block = f.readline()
@@ -365,12 +361,11 @@ class MySubscribeCallback(SubscribeCallback):
             test_rt = float(receive_response_time) - float(validation_start_time)
 
             result_path = get_folder_path('test_results')
-            f = open(result_path + '/rt_results.txt', 'a+')
-            # if test_rt < guaranteed_rt:
-            #     f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
-            # else:
-            f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
-            f.close()
+            with open(result_path + '/rt_results.txt', 'a+') as f:
+                # if test_rt < guaranteed_rt:
+                #     f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
+                # else:
+                f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
         
         # receiver and validators receive tags and store
         elif message.message["msg"]["type"] == "tags" and message.message["msg"]["publisherId"] != ID:
@@ -389,10 +384,11 @@ class MySubscribeCallback(SubscribeCallback):
             print('receiver get chals')
             jobId = message.message["msg"]["jobId"]
             publisherId = message.message["msg"]["publisherId"]
+            integrity_validation_start_time = publisherId = message.message["msg"]["integrity_validation_start_time"]
             tmp = message.message["msg"]["chal"]
             chal = tmp.split('|')
 
-            store_path = get_folder_path('storage')
+            store_path = get_folder_path('files')
             file_name = store_path + '/' + jobId + '.txt'
             proof = integrity_validation.genProof(publisherId, file_name, chal)
 
@@ -401,7 +397,8 @@ class MySubscribeCallback(SubscribeCallback):
                 "jobId": jobId,
                 "publisherId": publisherId,
                 "receiverId": ID,
-                "proof": proof
+                "proof": proof,
+                "integrity_validation_start_time": integrity_validation_start_time
             }
             # send proof to validators
             pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).pn_async(my_publish_callback)
@@ -413,13 +410,19 @@ class MySubscribeCallback(SubscribeCallback):
             receiverId = message.message["msg"]["receiverId"]
             jobId = message.message["msg"]["jobId"]
             proof = message.message["msg"]["proof"]
+            integrity_validation_start_time = message.message["msg"]["integrity_validation_start_time"]
             skey = integrity_validation.loadPrvKey(publisherId)
             hashis = HASHIS[jobId]
 
             is_integrity = integrity_validation.checkProof(proof, hashis, skey)
+
+            integrity_validation_end_time = time.time()*1000
+
+            integrity_validation_cost = float(integrity_validation_end_time) - float(integrity_validation_start_time)
+
             result_path = get_folder_path('test_results')
             with open(result_path + '/integrity_results', 'a+') as f:
-                f.write(jobId + ',' + receiverId + ',' + is_integrity)
+                f.write(jobId + ',' + receiverId + ',' + integrity_validation_cost + ',' +is_integrity + '\n')
 
 
 pubnub.add_listener(MySubscribeCallback())
