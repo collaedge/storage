@@ -224,7 +224,9 @@ class JobClient:
         
         # based on extra rewards, reflecting histroy performance
         # only compute for who has expressed interests
-        reputation_receivers = self.computeBasedOnRewards(receiverIds, job_record)
+        reputation_receivers = self.reputationBasedOnRewards(receiverIds, job_record)
+        # or
+        # reputation_receivers = self.reputationWithPunishment(receiverIds, job_record)
         print('++++++++ reputation_receivers n++++++++')
         print(reputation_receivers)
 
@@ -248,7 +250,7 @@ class JobClient:
 
         return reputation_receivers
 
-    def computeBasedOnRewards(self, receiverIds, job_record):
+    def reputationBasedOnRewards(self, receiverIds, job_record):
         B = 0.2
         reward_score = {}
         rewards = {}
@@ -282,6 +284,45 @@ class JobClient:
             reward_score[receiverId] = score
 
         return reward_score
+
+    # decreate reputation score with success rates
+    def reputationWithPunishment(self, receiverIds, job_record):
+        B = 0.2
+        reward_score = {}
+        rewards = {}
+        RECENT_JOB_NUM = 20
+        print('+++++ unsorted print(job_record) ++++')
+        print(job_record)
+        # sort by start time
+        for receiverId, records in job_record.items():
+            job_record[receiverId] = sorted(records, key=lambda x: x['start_time'], reverse=True)
+        print('+++++ sorted print(job_record) ++++')
+        print(job_record)
+        # extra rewards on each record of receivers on recent X number of jobs
+        i = 0
+        for receiverId, records in job_record.items():
+            if receiverId in receiverIds:
+                for record in records:
+                    if i<RECENT_JOB_NUM:
+                        rewards.setdefault(receiverId, []).append({
+                            'start_time': float(record['start_time']),
+                            'extra_rewards': float(record['extra_rewards'])
+                        })
+                    i = i+1
+        
+        print('+++++ sorted print(reward_score) ++++')
+        print(rewards)
+        
+        fail = 0
+        for receiverId, records in rewards.items():
+            score = 0
+            for record in records:
+                if record['extra_rewards'] == 0:
+                    fail += 1
+                score = B*record['extra_rewards'] + (1-B)*score 
+            reward_score[receiverId] = score
+
+        return reward_score*(1-(fail/RECENT_JOB_NUM))
 
     def getHihgestReceiver(self, receivers):
         print('====receivers: ')

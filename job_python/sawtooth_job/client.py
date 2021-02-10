@@ -9,6 +9,8 @@ import uuid
 import sys
 import string
 import statistics
+import shutil
+import fractions
 
 from sawtooth_job.job_client import JobClient
 import integrity_validation
@@ -39,6 +41,29 @@ def get_folder_path(folder_name):
         os.makedirs(folder_name)
     return os.getcwd() + "/" + folder_name
 
+def generate_random_waiting_time(receiverId, duration):
+    portion = float(duration) // (PARTICIPANTS - 1)
+    print('portion: ', portion)
+
+    random_times = {}
+    start = 0
+    end = portion
+    i = 0
+    index = 1
+    while i <  (PARTICIPANTS - 1):
+        s_id = 'server_'+str(index)
+        # receiver will not get a time range
+        if receiverId == s_id:
+            index += 1
+            continue
+        
+        random_times[s_id] = [start, end]
+        start = end
+        end = start + portion
+        index += 1
+        i += 1
+    return random_times
+
 def send_tags(pubnub, message, jobId, publisherId, receiverId):
     # generate tags for integrity validation
     tags = integrity_validation.tagGen(ID, jobId)
@@ -54,6 +79,9 @@ def send_tags(pubnub, message, jobId, publisherId, receiverId):
     with open(store_path + '/' + ID + '_' + jobId + '.txt', 'w+') as f:
         for tag in tags:
             f.write(tag+'\n')
+
+    # after generate tags, delete files sent to receiver
+    shutil.rmtree(get_folder_path('files'))
 
     pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_tags}).pn_async(my_publish_callback)
 
@@ -73,6 +101,7 @@ def send_files(pubnub, message, sent_file_prop):
     sent_file_prop['file'] = one_block
     sent_file_prop['is_head'] = True
 
+    # save files, in order to generate tags
     store_path = get_folder_path('files')
     with open(store_path + '/' + ID + '_' + jobId + '.txt', 'a+') as f:
         f.write(one_block+'\n')
@@ -150,15 +179,15 @@ def send_integrity_validation(pubnub, message):
 
     HASHIS[jobId] = hashis
 
-    in_val = {
-        "type": "in_val",
+    chals = {
+        "type": "chals",
         "jobId": jobId,
         "publisherId": publisherId,
         "receiverId": receiverId,
         "chal": '|'.join(keys)
     }
     # send chal message
-    pubnub.publish().channel("chan-message").message({"id": ID,"msg":in_val}).sync()
+    pubnub.publish().channel("chan-message").message({"id": ID,"msg":chals}).sync()
 
 def get_keyfile(username):
     home = os.path.expanduser("~")
@@ -251,30 +280,8 @@ class MySubscribeCallback(SubscribeCallback):
                 send_files(pubnub, message, sent_file_prop)
 
                 print('sent files')
-                '''
-                generate a group of random number to indicate each server pick a time to start validation process
-                do it later
-                '''
-
-                portion = float(duration) // (PARTICIPANTS - 1)
-                print('portion: ', portion)
-
-                random_times = {}
-                start = 0
-                end = portion
-                i = 0
-                index = 1
-                while i <  (PARTICIPANTS - 1):
-                    s_id = 'server_'+str(index)
-                    if receiverId == s_id:
-                        index += 1
-                        continue
-                    
-                    random_times[s_id] = [start, end]
-                    start = end
-                    end = start + portion
-                    index += 1
-                    i += 1
+                
+                random_times = generate_random_waiting_time(receiverId, duration)
                     
 
                 print('random_times: ', random_times)
@@ -365,12 +372,8 @@ class MySubscribeCallback(SubscribeCallback):
             test_rt = float(receive_response_time) - float(validation_start_time)
 
             result_path = get_folder_path('test_results')
-            f = open(result_path + '/rt_results.txt', 'a+')
-            # if test_rt < guaranteed_rt:
-            #     f.write(jobId + ',' + receiverId + ',' + str(1) + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
-            # else:
-            f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
-            f.close()
+            with open(result_path + '/rt_results.txt', 'a+') as f:
+                f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
         
         # receiver and validators receive tags and store
         elif message.message["msg"]["type"] == "tags" and message.message["msg"]["publisherId"] != ID:
@@ -385,7 +388,7 @@ class MySubscribeCallback(SubscribeCallback):
                     f.write(tag + '\n')
         
         # receiver get chals
-        elif message.message["msg"]["type"] == "in_val" and message.message["msg"]["receiverId"] == ID:
+        elif message.message["msg"]["type"] == "chals" and message.message["msg"]["receiverId"] == ID:
             print('receiver get chals')
             jobId = message.message["msg"]["jobId"]
             publisherId = message.message["msg"]["publisherId"]
@@ -421,11 +424,12 @@ class MySubscribeCallback(SubscribeCallback):
             is_integrity = integrity_validation.checkProof(proof, hashis, skey)
             result_path = get_folder_path('test_results')
             with open(result_path + '/integrity_results', 'a+') as f:
-                f.write(jobId + ',' + receiverId + ',' + is_integrity)
+                f.write(jobId + ',' + receiverId + ',' + is_integrity + '\n')
 
-
-pubnub.add_listener(MySubscribeCallback())
-pubnub.subscribe().channels("chan-message").execute()
+def listen_and_sub():
+    print('start listen and subscribe')
+    pubnub.add_listener(MySubscribeCallback())
+    pubnub.subscribe().channels("chan-message").execute()
 
 '''
 after duration time, propose a transaction
@@ -442,89 +446,79 @@ def issue_tx(pub):
     print('--- start to propose transaction ---')
     result_path = get_folder_path('test_results')
     # check weather has validated
-    if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.txt'):
-        print('---- validation get results ----')
+    if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.txt') and os.path.exists(result_path+'/integrity_results.txt'):
         with open(result_path + '/rt_results.txt') as f:
-            print('--- file opened ---')
+            print('---- rt validation get results ----')
             guaranteed_rt = ''
             test_rts = []
             receiverId = ''
             start_time = ''
-            is_integrity = ''
             while True:
                 result = f.readline()
                 l = result.split(',')
-                if l[0] == pub["jobId"]:
+                if l[0] == jobId:
                     receiverId = l[1]
                     guaranteed_rt = l[2]
                     test_rts.append(float(l[3]))
                     start_time = l[4]
-                    is_integrity = '1'
                 elif not result:
                     break
             # choose the median rt recorded transaction 
             test_rt = statistics.median(test_rts)
             print("test_rt: ", test_rt)
+        
+        with open(result_path + '/integrity_results.txt') as f2:
+            print('---- integrity validation get results ----')
+            results = []
+            right = 0
+            while True:
+                result = f2.readline()
+                line = result.split(',')
+                if line[0] == jobId:
+                    integrity = line[2]
+                    results.append(integrity)
+                    if integrity == '1':
+                        right += 1
+                elif not result:
+                    break
+            if float(right)/len(results) > fractions.Fraction(2,3):
+                is_integrity = '1'
+            else:
+                is_integrity = '0'
+
         keyfile = get_keyfile(ID)
         job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
         job_client.create(jobId, receiverId, pub["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
 
+def publish_job(data_size, duration, base_rewards):
+    print('publishing job')
+    ## publish a message
+    # data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
+    jobId = str(uuid.uuid4().hex)
+    global DATASIZE 
+    DATASIZE = data_size
+    # generate public key and private key
+    pKey, sKey = integrity_validation.keyGen(ID)
 
-data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
-jobId = str(uuid.uuid4().hex)
-DATASIZE = data_size
-# generate public key and private key
-pKey, sKey = integrity_validation.keyGen(ID)
+    pKey_str = pKey.exportKey().decode("utf-8")
+    sKey_str = sKey.exportKey().decode("utf-8")
+    # print("pKey_str: ", type(pKey_str))
+    # print("sKey_str: ", type(sKey_str))
 
-pKey_str = pKey.exportKey().decode("utf-8")
-sKey_str = sKey.exportKey().decode("utf-8")
-# print("pKey_str: ", type(pKey_str))
-# print("sKey_str: ", type(sKey_str))
+    pub = {
+        "publisherId": ID,
+        "type": "pub",
+        "jobId": jobId,
+        "data_size": data_size,
+        "duration": duration,
+        "base_rewards": base_rewards,
+        "pKey": pKey_str,
+        "sKey": sKey_str,
+        "req_time_stamp": time.time()*1000
+    }
+    jobs[jobId] = pub
 
-pub = {
-    "publisherId": ID,
-    "type": "pub",
-    "jobId": jobId,
-    "data_size": data_size,
-    "duration": duration,
-    "base_rewards": base_rewards,
-    "pKey": pKey_str,
-    "sKey": sKey_str,
-    "req_time_stamp": time.time()*1000
-}
-jobs[jobId] = pub
-
-pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
-
-# def publish_job(data_size, duration, base_rewards):
-#     print('publishing job')
-#     ## publish a message
-#     # data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
-#     jobId = str(uuid.uuid4().hex)
-#     DATASIZE = data_size
-#     # generate public key and private key
-#     pKey, sKey = integrity_validation.keyGen(ID)
-
-#     pKey_str = pKey.exportKey().decode("utf-8")
-#     sKey_str = sKey.exportKey().decode("utf-8")
-#     # print("pKey_str: ", type(pKey_str))
-#     # print("sKey_str: ", type(sKey_str))
-
-#     pub = {
-#         "publisherId": ID,
-#         "type": "pub",
-#         "jobId": jobId,
-#         "data_size": data_size,
-#         "duration": duration,
-#         "base_rewards": base_rewards,
-#         "pKey": pKey_str,
-#         "sKey": sKey_str,
-#         "req_time_stamp": time.time()*1000
-#     }
-#     jobs[jobId] = pub
-
-#     pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
-
-#     # issue_tx(pub)
+    pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
+    # issue_tx(pub)
 
 
