@@ -176,7 +176,7 @@ class MySubscribeCallback(SubscribeCallback):
     def message(self, pubnub, message):
         # servers, except publisher, respond the request
         if message.message["id"] != ID and message.message["msg"]["type"] == "pub":
-            print("other servers receive publish: ",message.message["msg"])
+            # print("other servers receive publish: ",message.message["msg"])
             publisherId = message.message["msg"]["publisherId"]
             jobId =  message.message["msg"]["jobId"]
             data_size = message.message["msg"]["data_size"]
@@ -303,7 +303,7 @@ class MySubscribeCallback(SubscribeCallback):
             duration = int(message.message["msg"]["duration"])
             
             # get random validation time range
-            random_times =  message.message["random_times"]
+            random_times =  message.message["msg"]["random_times"]
             print("validators get random times: ", random_times)
 
             # send files and receive files is sync, therefore, when other server receive notifications, all files are received
