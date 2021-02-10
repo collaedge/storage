@@ -39,7 +39,7 @@ def get_folder_path(folder_name):
         os.makedirs(folder_name)
     return os.getcwd() + "/" + folder_name
 
-def send_tags(pubnub, message, publisherId, receiverId):
+def send_tags(pubnub, message, jobId, publisherId, receiverId):
     # generate tags for integrity validation
     tags = integrity_validation.tagGen(ID, jobId)
     sent_tags = {
@@ -90,7 +90,7 @@ def send_files(pubnub, message, sent_file_prop):
         i = i + 1
     
     # send tags to all other servers
-    send_tags(pubnub, message, publisherId, receiverId)
+    send_tags(pubnub, message, jobId, publisherId, receiverId)
 
 def save_file(message):
     is_head = message.message["msg"]["is_head"]
@@ -469,35 +469,62 @@ def issue_tx(pub):
         job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
         job_client.create(jobId, receiverId, pub["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
 
-def publish_job(data_size, duration, base_rewards):
-    print('publishing job')
-    ## publish a message
-    # data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
-    jobId = str(uuid.uuid4().hex)
-    DATASIZE = data_size
-    # generate public key and private key
-    pKey, sKey = integrity_validation.keyGen(ID)
 
-    pKey_str = pKey.exportKey().decode("utf-8")
-    sKey_str = sKey.exportKey().decode("utf-8")
-    # print("pKey_str: ", type(pKey_str))
-    # print("sKey_str: ", type(sKey_str))
+data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
+jobId = str(uuid.uuid4().hex)
+DATASIZE = data_size
+# generate public key and private key
+pKey, sKey = integrity_validation.keyGen(ID)
 
-    pub = {
-        "publisherId": ID,
-        "type": "pub",
-        "jobId": jobId,
-        "data_size": data_size,
-        "duration": duration,
-        "base_rewards": base_rewards,
-        "pKey": pKey_str,
-        "sKey": sKey_str,
-        "req_time_stamp": time.time()*1000
-    }
-    jobs[jobId] = pub
+pKey_str = pKey.exportKey().decode("utf-8")
+sKey_str = sKey.exportKey().decode("utf-8")
+# print("pKey_str: ", type(pKey_str))
+# print("sKey_str: ", type(sKey_str))
 
-    pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
+pub = {
+    "publisherId": ID,
+    "type": "pub",
+    "jobId": jobId,
+    "data_size": data_size,
+    "duration": duration,
+    "base_rewards": base_rewards,
+    "pKey": pKey_str,
+    "sKey": sKey_str,
+    "req_time_stamp": time.time()*1000
+}
+jobs[jobId] = pub
 
-    # issue_tx(pub)
+pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
+
+# def publish_job(data_size, duration, base_rewards):
+#     print('publishing job')
+#     ## publish a message
+#     # data_size, duration, base_rewards = input("Input a request info to publish separated by space <data_size(MB) duration(s) base_rewards>: ").split()
+#     jobId = str(uuid.uuid4().hex)
+#     DATASIZE = data_size
+#     # generate public key and private key
+#     pKey, sKey = integrity_validation.keyGen(ID)
+
+#     pKey_str = pKey.exportKey().decode("utf-8")
+#     sKey_str = sKey.exportKey().decode("utf-8")
+#     # print("pKey_str: ", type(pKey_str))
+#     # print("sKey_str: ", type(sKey_str))
+
+#     pub = {
+#         "publisherId": ID,
+#         "type": "pub",
+#         "jobId": jobId,
+#         "data_size": data_size,
+#         "duration": duration,
+#         "base_rewards": base_rewards,
+#         "pKey": pKey_str,
+#         "sKey": sKey_str,
+#         "req_time_stamp": time.time()*1000
+#     }
+#     jobs[jobId] = pub
+
+#     pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
+
+#     # issue_tx(pub)
 
 
