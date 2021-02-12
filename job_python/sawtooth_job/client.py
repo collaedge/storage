@@ -184,7 +184,8 @@ def send_integrity_validation(pubnub, message):
         "jobId": jobId,
         "publisherId": publisherId,
         "receiverId": receiverId,
-        "chal": '|'.join(keys)
+        "chal": '|'.join(keys),
+        "challenger:": ID
     }
     # send chal message
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":chals}).sync()
@@ -373,7 +374,7 @@ class MySubscribeCallback(SubscribeCallback):
 
             result_path = get_folder_path('test_results')
             with open(result_path + '/rt_results.txt', 'a+') as f:
-                f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + '\n')
+                f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + ',' + str(ID) + '\n')
         
         # receiver and validators receive tags and store
         elif message.message["msg"]["type"] == "tags" and message.message["msg"]["publisherId"] != ID:
@@ -394,6 +395,7 @@ class MySubscribeCallback(SubscribeCallback):
             publisherId = message.message["msg"]["publisherId"]
             tmp = message.message["msg"]["chal"]
             chal = tmp.split('|')
+            challenger = message.message["msg"]["challenger"]
 
             store_path = get_folder_path('storage')
             file_name = store_path + '/' + jobId + '.txt'
@@ -408,7 +410,7 @@ class MySubscribeCallback(SubscribeCallback):
                 "proof": proof
             }
             # send proof to validators
-            pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).pn_async(my_publish_callback)
+            pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).sync()
             print('receiver sends proof')
 
         # validators receive proof
@@ -418,14 +420,15 @@ class MySubscribeCallback(SubscribeCallback):
             receiverId = message.message["msg"]["receiverId"]
             jobId = message.message["msg"]["jobId"]
             proof = message.message["msg"]["proof"]
+            print('validators get proof: ', proof)
             skey = integrity_validation.loadPrvKey(publisherId)
             hashis = HASHIS[jobId]
 
             print('validators check proof')
             is_integrity = integrity_validation.checkProof(proof, hashis, skey)
             result_path = get_folder_path('test_results')
-            with open(result_path + '/integrity_results', 'a+') as f:
-                f.write(jobId + ',' + receiverId + ',' + is_integrity + '\n')
+            with open(result_path + '/integrity_results.txt', 'a+') as f:
+                f.write(jobId + ',' + receiverId + ',' + is_integrity + ',' + ID +'\n')
 
 def listen_and_sub():
     print('start listen and subscribe')
@@ -446,6 +449,7 @@ def issue_tx(pub):
     time.sleep(float(duration)*10)
     print('--- start to propose transaction ---')
     result_path = get_folder_path('test_results')
+    print('--- result_path --- ', result_path)
     # check weather has validated
     if os.path.exists('test_results') and os.path.exists(result_path+'/rt_results.txt') and os.path.exists(result_path+'/integrity_results.txt'):
         with open(result_path + '/rt_results.txt') as f:

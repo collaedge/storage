@@ -82,6 +82,7 @@ def tagGen(serverId, jobId):
     validators generate challenges
 '''    
 def genChallenge(file_name):
+    print('gen chal filename: ', file_name)
     with open(file_name, 'r') as f:
 	    blocks = f.readlines()
     N = len(blocks)
@@ -123,6 +124,7 @@ def genProof(id, file_name, tag_keys):
     cipher = PKCS1_OAEP.new(pkey)
     cipher_text = b64encode(cipher.encrypt(H.encode()))
 
+    print('return proof: ', cipher_text.decode('utf-8'))
     return cipher_text.decode('utf-8')
 
 '''
