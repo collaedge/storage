@@ -28,8 +28,6 @@ from colorlog import ColoredFormatter
 from sawtooth_job.job_client import JobClient
 from sawtooth_job.job_exceptions import JobException
 
-from sawtooth_job.tcp_client import TcpClient
-
 
 DISTRIBUTION_NAME = 'sawtooth-job'
 
@@ -366,11 +364,11 @@ def do_create(args):
 
     print("Response: {}".format(response))
 
-def do_broadcast(args):
-    # publisher = args.publisher
-    # name = input("Please input publiser name > ")
-    tcp_client = TcpClient(args.publisher)
-    tcp_client.run()
+# def do_broadcast(args):
+#     # publisher = args.publisher
+#     # name = input("Please input publiser name > ")
+#     tcp_client = TcpClient(args.publisher)
+#     tcp_client.run()
 
 """
 # for test purpose

@@ -299,7 +299,7 @@ class MySubscribeCallback(SubscribeCallback):
                 }
                
                 # notify others to validate data and response time from receiver 
-                pubnub.publish().channel("chan-message").message({"id": ID,"msg":dec}).pn_async(my_publish_callback)
+                pubnub.publish().channel("chan-message").message({"id": ID,"msg":dec}).sync()
                 print('publisher sent decision message')
         # other servers, except receiver, receive the publisher's decision
         elif message.message["msg"]["type"] == "dec" \
@@ -318,10 +318,10 @@ class MySubscribeCallback(SubscribeCallback):
             print('------ wait ------', wait_time)
             time.sleep(wait_time)
             
-            # asynchronous
+            # synchronous
             send_rt_validation(pubnub, message)
 
-            # asynchronous
+            # synchronous
             send_integrity_validation(pubnub, message)
             
         # receiver save files
@@ -410,6 +410,7 @@ class MySubscribeCallback(SubscribeCallback):
             # send proof to validators
             pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).pn_async(my_publish_callback)
             print('receiver sends proof')
+
         # validators receive proof
         elif message.message["msg"]["type"] == "proof" and message.message["msg"]["receiverId"] != ID:
             print('validators get proof')
@@ -481,13 +482,15 @@ def issue_tx(pub):
                         right += 1
                 elif not result:
                     break
-            if float(right)/len(results) > fractions.Fraction(2,3):
+            if float(right)/len(results) >= fractions.Fraction(2,3):
                 is_integrity = '1'
             else:
                 is_integrity = '0'
 
         keyfile = get_keyfile(ID)
         job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
+        print('{} {} {} {} {} {} {} {} {} {}'.\
+            format(jobId, receiverId, pub["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity))
         job_client.create(jobId, receiverId, pub["publisherId"], data_size, start_time, duration, float(guaranteed_rt), float(test_rt), float(base_rewards), is_integrity)
 
 def publish_job(data_size, duration, base_rewards):
@@ -519,6 +522,6 @@ def publish_job(data_size, duration, base_rewards):
     jobs[jobId] = pub
 
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":pub}).pn_async(my_publish_callback)
-    # issue_tx(pub)
+    issue_tx(pub)
 
 
