@@ -407,14 +407,15 @@ class MySubscribeCallback(SubscribeCallback):
                 "jobId": jobId,
                 "publisherId": publisherId,
                 "receiverId": ID,
-                "proof": proof
+                "proof": proof,
+                "challenger": challenger
             }
             # send proof to validators
             pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).sync()
             print('receiver sends proof')
 
         # validators receive proof
-        elif message.message["msg"]["type"] == "proof" and message.message["msg"]["receiverId"] != ID:
+        elif message.message["msg"]["type"] == "proof" and message.message["msg"]["receiverId"] != ID and message.message["msg"]["challenger"] == ID:
             print('validators get proof')
             publisherId = message.message["msg"]["publisherId"]
             receiverId = message.message["msg"]["receiverId"]
