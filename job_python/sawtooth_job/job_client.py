@@ -81,7 +81,7 @@ class JobClient:
         elif not is_integrity:
             extra_rewards = 0
             base_rewards = 0
-        else:
+        elif test_rt > guaranteed_rt:
             extra_rewards = 0
             base_rewards = 0.5*base_rewards
         return self._send_transaction(
@@ -493,7 +493,7 @@ class JobClient:
                     return response
 
             return response
-
+        print('send request')
         return self._send_request(
             "batches", batch_list.SerializeToString(),
             'application/octet-stream',

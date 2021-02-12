@@ -11,7 +11,7 @@ class JobPayload:
         print(payload.decode())
         try:
             # load payload
-            jobId, receiverId, publisherId, data_size, start_time, expire_time, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity, action = payload.decode().split(",")
+            jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity, action = payload.decode().split(",")
         except ValueError:
             raise InvalidTransaction("Invalid payload serialization")
         if not jobId:
@@ -29,8 +29,8 @@ class JobPayload:
         if not start_time:
             raise InvalidTransaction('start_time is required')
 
-        if not expire_time:
-            raise InvalidTransaction('expire_time is required')
+        if not duration:
+            raise InvalidTransaction('duration is required')
 
         if not guaranteed_rt:
             raise InvalidTransaction('guaranteed_rt is required')
@@ -58,7 +58,7 @@ class JobPayload:
         self._publisherId = publisherId
         self._data_size = data_size
         self._start_time = start_time
-        self._expire_time = expire_time
+        self._duration = duration
         self._guaranteed_rt = guaranteed_rt
         self._test_rt = test_rt
         self._base_rewards = base_rewards
@@ -91,8 +91,8 @@ class JobPayload:
         return self._start_time
 
     @property
-    def _expire_time(self):
-        return self._expire_time
+    def duration(self):
+        return self._duration
     
     @property
     def guaranteed_rt(self):

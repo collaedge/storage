@@ -474,22 +474,32 @@ def issue_tx(pub):
         
         with open(result_path + '/integrity_results.txt') as f2:
             print('---- integrity validation get results ----')
-            results = []
+            # results = []
             right = 0
+            is_integrity = '0'
             while True:
                 result = f2.readline()
                 line = result.split(',')
-                if line[0] == jobId:
-                    integrity = line[2]
-                    results.append(integrity)
-                    if integrity == '1':
-                        right += 1
+                if line[0] == jobId and line[2] == '1':
+                    is_integrity == '1'
+                    break
                 elif not result:
                     break
-            if float(right)/len(results) >= fractions.Fraction(2,3):
-                is_integrity = '1'
-            else:
-                is_integrity = '0'
+
+            # while True:
+            #     result = f2.readline()
+            #     line = result.split(',')
+            #     if line[0] == jobId:
+            #         integrity = line[2]
+            #         results.append(integrity)
+            #         if integrity == '1':
+            #             right += 1
+            #     elif not result:
+            #         break
+            # if float(right)/len(results) >= fractions.Fraction(2,3):
+            #     is_integrity = '1'
+            # else:
+            #     is_integrity = '0'
 
         keyfile = get_keyfile(ID)
         job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   

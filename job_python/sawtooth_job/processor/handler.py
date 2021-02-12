@@ -52,7 +52,7 @@ class JobTransactionHandler(TransactionHandler):
                         publisherId=job_payload.publisherId,
                         data_size=job_payload.data_size,
                         start_time=job_payload.start_time,
-                        expire_time=job_payload.expire_time,
+                        duration=job_payload.duration,
                         guaranteed_rt=job_payload.guaranteed_rt,
                         test_rt=job_payload.test_rt,
                         base_rewards=job_payload.base_rewards,
