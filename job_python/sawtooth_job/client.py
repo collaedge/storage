@@ -416,12 +416,11 @@ class MySubscribeCallback(SubscribeCallback):
 
         # validators receive proof
         elif message.message["msg"]["type"] == "proof" and message.message["msg"]["receiverId"] != ID and message.message["msg"]["challenger"] == ID:
-            print('validators get proof')
             publisherId = message.message["msg"]["publisherId"]
             receiverId = message.message["msg"]["receiverId"]
             jobId = message.message["msg"]["jobId"]
             proof = message.message["msg"]["proof"]
-            print('validators get proof: ', proof)
+            print('validator ****{}***** get proof {}'.format(ID, proof))
             skey = integrity_validation.loadPrvKey(publisherId)
             hashis = HASHIS[jobId]
 
