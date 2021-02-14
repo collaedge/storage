@@ -165,7 +165,7 @@ def send_rt_validation(pubnub, message):
 
     # send validation message
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":val}).sync()
-    print('+++other servers sent validation messages++++')
+    print('+++other servers sent rt validation messages++++')
 
 '''
     send challenge to receiver
@@ -189,6 +189,7 @@ def send_integrity_validation(pubnub, message):
     }
     # send chal message
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":chals}).sync()
+    print('+++other servers sent intergrity validation messages++++')
 
 def get_keyfile(username):
     home = os.path.expanduser("~")
@@ -362,7 +363,7 @@ class MySubscribeCallback(SubscribeCallback):
             
         # validators receive results
         elif message.message["msg"]["type"] == "re_val" and message.message["msg"]["receiverId"] != ID:
-            print('validators receive results')
+            print('validators receive rt results')
             start_time = message.message["msg"]["start_time"]
             validation_start_time = message.message["msg"]["validation_start_time"]
             receive_response_time = time.time()*1000
