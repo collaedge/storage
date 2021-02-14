@@ -82,8 +82,8 @@ def send_tags(pubnub, message, jobId, publisherId, receiverId):
 
     # after generate tags, delete files sent to receiver
     shutil.rmtree(get_folder_path('files'))
-
-    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_tags}).pn_async(my_publish_callback)
+    print('------------ publisher send tags ----------------')
+    pubnub.publish().channel("chan-message").message({"id": ID, "msg": sent_tags}).sync()
 
 '''
     send files to receiver
@@ -95,7 +95,7 @@ def send_files(pubnub, message, sent_file_prop):
     receiverId = sent_file_prop["receiverId"]
 
     one_block = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(BLOCL_SIZE)])
-    count = 125
+    count = 20
     i = 0
     # head contains one block, for response time testing
     sent_file_prop['file'] = one_block
@@ -402,7 +402,7 @@ class MySubscribeCallback(SubscribeCallback):
             print('receiver starts to generate proof')
             proof = integrity_validation.genProof(publisherId, file_name, chal)
 
-            proof = {
+            proofs = {
                 "type": "proof",
                 "jobId": jobId,
                 "publisherId": publisherId,
@@ -411,8 +411,8 @@ class MySubscribeCallback(SubscribeCallback):
                 "challenger": challenger
             }
             # send proof to validators
-            pubnub.publish().channel("chan-message").message({"id": ID,"msg":proof}).sync()
-            print('receiver sends proof')
+            pubnub.publish().channel("chan-message").message({"id": ID,"msg":proofs}).sync()
+            print('receiver sends proof: ', proofs)
 
         # validators receive proof
         elif message.message["msg"]["type"] == "proof" and message.message["msg"]["receiverId"] != ID and message.message["msg"]["challenger"] == ID:
