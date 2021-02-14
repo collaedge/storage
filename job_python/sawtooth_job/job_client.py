@@ -233,9 +233,9 @@ class JobClient:
         recvBaseRewards = {}
         recvExtraRewards = {}
         # initialize 
-        for job in jobs:
-            recvBaseRewards[job['receiverId']] = 0
-            recvExtraRewards[job['receiverId']] = 0
+        for receiverId in receiverIds:
+            recvBaseRewards[receiverId] = 0
+            recvExtraRewards[receiverId] = 0
 
         for job in jobs:
             recvBaseRewards[job['receiverId']] += job['base_rewards']

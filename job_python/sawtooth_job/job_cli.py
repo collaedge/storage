@@ -311,8 +311,8 @@ def do_list(args):
     
     if job_list is not None:
         for job_data in job_list:
-            jobId, workerId, publisherId, start_time, end_time, deadline, base_rewards, extra_rewards = job_data
-            print('{}, {}, {}, {}, {}, {}, {}, {}'.format(jobId, workerId, publisherId, start_time, end_time, deadline, base_rewards, extra_rewards))
+            jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity = job_data
+            print('{}, {}, {}, {}, {}, {}, {}, {}'.format(jobId, receiverId, publisherId, data_size, start_time, duration, guaranteed_rt, test_rt, base_rewards, extra_rewards, is_integrity))
     else:
         raise JobException("Could not retrieve game listing.")
 
@@ -480,8 +480,8 @@ def main(prog_name=os.path.basename(sys.argv[0]), args=None):
         do_list(args)
     # elif args.command == 'workers':
     #     do_workers(args)
-    elif args.command == 'broadcast':
-        do_broadcast(args)
+    # elif args.command == 'broadcast':
+    #     do_broadcast(args)
     # elif args.command == 'take':
     #     do_take(args)
     else:

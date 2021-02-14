@@ -185,7 +185,7 @@ def send_integrity_validation(pubnub, message):
         "publisherId": publisherId,
         "receiverId": receiverId,
         "chal": '|'.join(keys),
-        "challenger:": ID
+        "challenger": ID
     }
     # send chal message
     pubnub.publish().channel("chan-message").message({"id": ID,"msg":chals}).sync()
@@ -313,10 +313,12 @@ class MySubscribeCallback(SubscribeCallback):
             
             # get random validation time range
             random_times =  message.message["msg"]["random_times"]
-            print("validators get random times: ", random_times)
+            # print("validators get random times: ", random_times)
 
+            choose_time_range = random_times[ID]
+            print("validator {ID} get random time range: ", choose_time_range)
             # send files and receive files is sync, therefore, when other server receive notifications, all files are received
-            wait_time = random.randrange(0, duration)
+            wait_time = random.randrange(choose_time_range[0], choose_time_range[1])
             print('------ wait ------', wait_time)
             time.sleep(wait_time)
             
@@ -391,7 +393,7 @@ class MySubscribeCallback(SubscribeCallback):
         
         # receiver get chals
         elif message.message["msg"]["type"] == "chals" and message.message["msg"]["receiverId"] == ID:
-            print('receiver get chals')
+            print('receiver get chals', message.message["msg"])
             jobId = message.message["msg"]["jobId"]
             publisherId = message.message["msg"]["publisherId"]
             tmp = message.message["msg"]["chal"]
