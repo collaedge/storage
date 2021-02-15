@@ -230,6 +230,10 @@ class JobClient:
         print('++++++++ reputation_receivers n++++++++')
         print(reputation_receivers)
 
+        for receiverId in receiverIds:
+            if not receiverId in reputation_receivers.keys():
+                reputation_receivers[receiverId] = 0.0
+
         recvBaseRewards = {}
         recvExtraRewards = {}
         # initialize 

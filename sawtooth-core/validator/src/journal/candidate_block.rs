@@ -24,6 +24,7 @@ use std::vec::Vec;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use std::io::{BufRead, BufReader};
 
 use cpython;
 use cpython::ObjectProtocol;
@@ -161,6 +162,44 @@ impl CandidateBlock {
             committed_txn_cache.add(txn.header_signature.clone());
         }
         true
+    }
+
+    fn check_rt_n_integrity(&self,  txn: &Transaction) -> bool {
+        println!("======= check_rt_n_integrity =========");
+         // current transaction
+        let v = String::from_utf8_lossy(&txn.payload);
+        let current_txn:Vec<&str> = v.split(',').collect();
+        println!("========= current transation ============= {:#?}", current_txn);
+        let job_id = current_txn.get(0).unwrap();
+        let rt = current_txn.get(7).unwrap();
+        // integrity in transaction
+        let txn_integrity = current_txn.get(10).unwrap();
+        println!("========= current job_id ============= {:#?}", job_id);
+
+        let mut file = File::open("/home/development/storage/job_python/sawtooth_job/test_results/overall.txt")?;
+        let reader = BufReader::new(file);
+        let test_rt = ""
+        // in tegrity in validation file
+        let is_integrity = "0"
+        // for line in reader.lines() {
+        //     println!("{}", line?);
+        // }
+        // Read the file line by line using the lines() iterator from std::io::BufRead.
+        for (index, line) in reader.lines().enumerate() {
+            let line = line.unwrap(); // Ignore errors.
+            // Show the line and its number.
+            println!("{}. {}", index + 1, line);
+            let obj:Vec<&str> = line.split(',').collect();
+            if obj.get(0).unwrap() == job_id {
+                test_rt = obj.get(1).unwrap()
+                is_integrity = obj.get(2).unwrap()
+            }
+        }
+
+        if is_integrity == txn_integrity && test_rt == rt{
+            return true
+        }
+        return false
     }
 
     fn check_transaction_rewards(&self,  txn: &Transaction) -> bool {

@@ -364,7 +364,7 @@ class MySubscribeCallback(SubscribeCallback):
                 pubnub.publish().channel("chan-message").message({"id": ID,"msg":re_val}).pn_async(my_publish_callback)
             
         # validators receive results
-        elif message.message["msg"]["type"] == "re_val" and message.message["msg"]["receiverId"] != ID:
+        elif message.message["msg"]["type"] == "re_val": #and message.message["msg"]["receiverId"] != ID:
             print('validators receive rt results')
             start_time = message.message["msg"]["start_time"]
             validation_start_time = message.message["msg"]["validation_start_time"]
@@ -429,14 +429,73 @@ class MySubscribeCallback(SubscribeCallback):
 
             print('validators check proof')
             is_integrity = integrity_validation.checkProof(proof, hashis, skey)
+
+            results = {
+                "type": "in_results",
+                "jobId": jobId,
+                "publisherId": publisherId,
+                "receiverId": receiverId,
+                "checkerId": ID,
+                "is_integrity": is_integrity,
+            }
+            # result_path = get_folder_path('test_results')
+            # with open(result_path + '/integrity_results.txt', 'a+') as f:
+            #     f.write(jobId + ',' + receiverId + ',' + is_integrity + ',' + ID +'\n')
+            pubnub.publish().channel("chan-message").message({"id": ID,"msg":results}).pn_async(my_publish_callback)
+            print('receiver share results: ', results)
+        
+        # notify others check results
+        elif message.message["msg"]["type"] == "in_results":
+            print('All get shared results: ', message.message["msg"])
+            jobId = message.message["msg"]["jobId"]
+            publisherId = message.message["msg"]["publisherId"]
+            receiverId = message.message["msg"]["receiverId"]
+            checkerId = message.message["msg"]["checkerId"]
+            
             result_path = get_folder_path('test_results')
             with open(result_path + '/integrity_results.txt', 'a+') as f:
-                f.write(jobId + ',' + receiverId + ',' + is_integrity + ',' + ID +'\n')
+                f.write(jobId + ',' + receiverId + ',' + is_integrity + ',' + checkerId +'\n')
+
+        # store overall results for validation
+        elif message.message["msg"]["type"] == "overall":
+            jobId = message.message["msg"]["jobId"]
+            rt_result = message.message["msg"]["rt_result"]
+            in_result = message.message["msg"]["in_result"]
+            print('receive overll -------------- {} {} {}: '.format(jobId, rt_result, in_result))
+
+            result_path = get_folder_path('test_results')
+            with open(result_path + '/overall.txt', 'a+') as f:
+                f.write(jobId + ',' + rt_result + ',' + in_result)
 
 def listen_and_sub():
     print('start listen and subscribe')
     pubnub.add_listener(MySubscribeCallback())
     pubnub.subscribe().channels("chan-message").execute()
+
+
+def overall_result(jobId, guaranteed_rt, test_rt, in_results):
+    print('guaranteed_rt: ', guaranteed_rt)
+    print('test_rt: ', test_rt)
+    print('in_results: ', in_results)
+    in_count = 0
+
+    for inte in in_results:
+            in_count += 1
+
+    in_result = '0'
+    
+    if (len(in_count) / len(in_results)) > fractions.Fraction(1,2):
+        in_result = '1'
+        
+    overall_results = {
+        "type": "overall",
+        "jobId": jobId,
+        "rt_result": str(test_rt),
+        "in_result": in_result
+    }
+
+    pubnub.publish().channel("chan-message").message({"id": ID,"msg":overall_results}).pn_async(my_publish_callback)
+        
 
 '''
 after duration time, propose a transaction
@@ -477,7 +536,7 @@ def issue_tx(pub):
         
         with open(result_path + '/integrity_results.txt') as f2:
             print('---- integrity validation get results ----')
-            # results = []
+            in_results = []
             right = 0
             is_integrity = '0'
             while True:
@@ -489,21 +548,16 @@ def issue_tx(pub):
                 elif not result:
                     break
 
-            # while True:
-            #     result = f2.readline()
-            #     line = result.split(',')
-            #     if line[0] == jobId:
-            #         integrity = line[2]
-            #         results.append(integrity)
-            #         if integrity == '1':
-            #             right += 1
-            #     elif not result:
-            #         break
-            # if float(right)/len(results) >= fractions.Fraction(2,3):
-            #     is_integrity = '1'
-            # else:
-            #     is_integrity = '0'
-
+            while True:
+                result = f2.readline()
+                line = result.split(',')
+                if line[0] == jobId:
+                    integrity = line[2]
+                    in_results.append(integrity)
+                elif not result:
+                    break
+            
+        overall_result(jobId, guaranteed_rt, test_rt, in_results)
         keyfile = get_keyfile(ID)
         job_client = JobClient(base_url='http://127.0.0.1:8008', keyfile=keyfile)   
         print('{} {} {} {} {} {} {} {} {} {}'.\
