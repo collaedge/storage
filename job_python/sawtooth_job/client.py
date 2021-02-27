@@ -375,6 +375,7 @@ class MySubscribeCallback(SubscribeCallback):
             guaranteed_rt = float(message.message["msg"]["guaranteed_rt"])
             jobId = message.message["msg"]["jobId"]
             receiverId = message.message["msg"]["receiverId"]
+            rt_checker = message.message["msg"]["rt_checker"]
 
             test_rt = float(receive_response_time) - float(validation_start_time)
 
