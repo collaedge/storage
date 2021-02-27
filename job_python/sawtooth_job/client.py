@@ -160,6 +160,7 @@ def send_rt_validation(pubnub, message):
             "receiverId": receiverId,
             "start_time": start_time,
             "guaranteed_rt": guaranteed_rt,
+            "rt_checker": ID,
             "validation_start_time": validation_start_time
         }
 
@@ -229,7 +230,7 @@ class MySubscribeCallback(SubscribeCallback):
                 "candidate": ID,
                 "type": "res",
                 "des": publisherId,
-                "guaranteed_rt": random.randint(300, 500),
+                "guaranteed_rt": random.randint(300, 500)*2,
                 "data_size": data_size,
                 "duration": duration,
                 "base_rewards": base_rewards,
@@ -336,13 +337,14 @@ class MySubscribeCallback(SubscribeCallback):
             e = time.time()*1000
             print('++++save file cost: {} ms'.format(e - s))
 
-        # receiver get validation message
+        # receiver get reponse time validation message
         elif message.message["msg"]["type"] == "val" and message.message["msg"]["receiverId"] == ID:
             print('===== get validation message')
             jobId = message.message["msg"]["jobId"]
             start_time = message.message["msg"]["start_time"]
             guaranteed_rt = message.message["msg"]["guaranteed_rt"]
             validation_start_time = message.message["msg"]["validation_start_time"]
+            rt_checker = message.message["msg"]["rt_checker"]
             file_name =  jobId + '.txt'
 
             if os.path.exists('storage'):
@@ -359,12 +361,13 @@ class MySubscribeCallback(SubscribeCallback):
                     "start_time": start_time,
                     "one_block": one_block,
                     "guaranteed_rt": guaranteed_rt,
+                    "rt_checker": rt_checker,
                     "validation_start_time": validation_start_time
                 }
                 pubnub.publish().channel("chan-message").message({"id": ID,"msg":re_val}).pn_async(my_publish_callback)
             
-        # validators receive results
-        elif message.message["msg"]["type"] == "re_val": #and message.message["msg"]["receiverId"] != ID:
+        # validators receive response time validation results
+        elif message.message["msg"]["type"] == "re_val" and message.message["msg"]["rt_checker"] == ID:
             print('validators receive rt results')
             start_time = message.message["msg"]["start_time"]
             validation_start_time = message.message["msg"]["validation_start_time"]
@@ -375,10 +378,34 @@ class MySubscribeCallback(SubscribeCallback):
 
             test_rt = float(receive_response_time) - float(validation_start_time)
 
+            share_rt = {
+                "type": "share_rt",
+                "jobId": jobId,
+                "receiverId": ID,
+                "guaranteed_rt": guaranteed_rt,
+                "test_rt": test_rt,
+                "start_time": start_time,
+                "rt_checker": rt_checker
+            }
+            pubnub.publish().channel("chan-message").message({"id": ID,"msg":share_rt}).pn_async(my_publish_callback)
+
+            # result_path = get_folder_path('test_results')
+            # with open(result_path + '/rt_results.txt', 'a+') as f:
+            #     f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + ',' + str(ID) + '\n')
+        
+        elif message.message["msg"]["type"] == "share_rt":
+            print('receive shared rt results')
+            jobId = message.message["msg"]["jobId"]
+            receiverId = message.message["msg"]["receiverId"]
+            guaranteed_rt = float(message.message["msg"]["guaranteed_rt"])
+            test_rt = float(message.message["msg"]["test_rt"])
+            start_time = message.message["msg"]["start_time"]
+            rt_checker = message.message["msg"]["rt_checker"]
+
             result_path = get_folder_path('test_results')
             with open(result_path + '/rt_results.txt', 'a+') as f:
-                f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + ',' + str(ID) + '\n')
-        
+                f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + ',' + str(rt_checker) + '\n')
+
         # receiver and validators receive tags and store
         elif message.message["msg"]["type"] == "tags" and message.message["msg"]["publisherId"] != ID:
             print('validators receive tags')
@@ -451,6 +478,7 @@ class MySubscribeCallback(SubscribeCallback):
             publisherId = message.message["msg"]["publisherId"]
             receiverId = message.message["msg"]["receiverId"]
             checkerId = message.message["msg"]["checkerId"]
+            is_integrity = message.message["msg"]["is_integrity"]
             
             result_path = get_folder_path('test_results')
             with open(result_path + '/integrity_results.txt', 'a+') as f:
@@ -480,11 +508,12 @@ def overall_result(jobId, guaranteed_rt, test_rt, in_results):
     in_count = 0
 
     for inte in in_results:
+        if inte == '1':
             in_count += 1
 
     in_result = '0'
     
-    if (len(in_count) / len(in_results)) > fractions.Fraction(1,2):
+    if (in_count / len(in_results)) > fractions.Fraction(1,2):
         in_result = '1'
         
     overall_results = {

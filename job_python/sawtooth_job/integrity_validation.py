@@ -47,7 +47,7 @@ def loadPubKey(id):
     return pkey
 
 '''
-    get parts of data to be validated
+    data owner use all, to generate tags for each block
 '''
 def getsample(data, num = None): 
     index = 0
