@@ -317,7 +317,7 @@ class MySubscribeCallback(SubscribeCallback):
             # print("validators get random times: ", random_times)
 
             choose_time_range = random_times[ID]
-            print("validator {ID} get random time range: ", choose_time_range)
+            print("validator {} get random time range: {}".format(ID, choose_time_range))
             # send files and receive files is sync, therefore, when other server receive notifications, all files are received
             wait_time = random.randrange(choose_time_range[0], choose_time_range[1])
             print('------ wait ------', wait_time)
@@ -382,17 +382,13 @@ class MySubscribeCallback(SubscribeCallback):
             share_rt = {
                 "type": "share_rt",
                 "jobId": jobId,
-                "receiverId": ID,
+                "receiverId": receiverId,
                 "guaranteed_rt": guaranteed_rt,
                 "test_rt": test_rt,
                 "start_time": start_time,
                 "rt_checker": rt_checker
             }
             pubnub.publish().channel("chan-message").message({"id": ID,"msg":share_rt}).pn_async(my_publish_callback)
-
-            # result_path = get_folder_path('test_results')
-            # with open(result_path + '/rt_results.txt', 'a+') as f:
-            #     f.write(jobId + ',' + receiverId + ',' + str(guaranteed_rt) + ',' + str(test_rt) + ',' + str(start_time) + ',' + str(ID) + '\n')
         
         elif message.message["msg"]["type"] == "share_rt":
             print('receive shared rt results')
